@@ -1,0 +1,143 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/*
+ * 视觉：Untitled UI 的灰阶、阴影、圆角与聚焦环；
+ * 品牌：Pitch Web 现有 token（主色 zinc-900、辅色黄、点缀紫 brand-600）。
+ */
+@theme {
+  --font-sans: "Inter Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #eaecf0;
+  --color-gray-300: #d0d5dd;
+  --color-gray-400: #98a2b3;
+  --color-gray-500: #667085;
+  --color-gray-600: #475467;
+  --color-gray-700: #344054;
+  --color-gray-800: #182230;
+  --color-gray-900: #101828;
+  --color-gray-950: #0c111d;
+
+  --color-primary: #18181b;
+  --color-primary-hover: #27272a;
+
+  --color-brand-25: hsl(264 70% 98.5%);
+  --color-brand-50: hsl(264 63% 97%);
+  --color-brand-100: hsl(259 61% 94%);
+  --color-brand-200: hsl(259 61% 88%);
+  --color-brand-300: hsl(259 58% 78%);
+  --color-brand-400: hsl(259 55% 66%);
+  --color-brand-500: hsl(259 53% 56%);
+  --color-brand-600: hsl(259 52% 48%);
+  --color-brand-700: hsl(259 52% 40%);
+  --color-brand-800: hsl(259 50% 32%);
+  --color-brand-900: hsl(260 48% 26%);
+
+  --color-highlight: hsl(60 100% 58%);
+  --color-highlight-soft: hsl(60 100% 90%);
+  --color-highlight-ink: #6b5d00;
+
+  --color-success-50: #ecfdf3;
+  --color-success-100: #dcfae6;
+  --color-success-200: #abefc6;
+  --color-success-300: #75e0a7;
+  --color-success-500: #17b26a;
+  --color-success-600: #079455;
+  --color-success-700: #067647;
+
+  --color-warning-25: #fffcf5;
+  --color-warning-50: #fffaeb;
+  --color-warning-100: #fef0c7;
+  --color-warning-200: #fedf89;
+  --color-warning-300: #fec84b;
+  --color-warning-500: #f79009;
+  --color-warning-600: #dc6803;
+  --color-warning-700: #b54708;
+
+  --color-error-50: #fef3f2;
+  --color-error-100: #fee4e2;
+  --color-error-200: #fecdca;
+  --color-error-300: #fda29b;
+  --color-error-500: #f04438;
+  --color-error-600: #d92d20;
+  --color-error-700: #b42318;
+
+  --color-blue-50: #eff8ff;
+  --color-blue-100: #d1e9ff;
+  --color-blue-200: #b2ddff;
+  --color-blue-500: #2e90fa;
+  --color-blue-600: #1570ef;
+  --color-blue-700: #175cd3;
+
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.1), 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 4px 8px -2px rgba(16, 24, 40, 0.1), 0 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03);
+  --shadow-xl: 0 20px 24px -4px rgba(16, 24, 40, 0.08), 0 8px 8px -4px rgba(16, 24, 40, 0.03);
+
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-pop-in: pop-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  --animate-slide-in: slide-in 220ms ease-out;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes slide-in {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes shimmer {
+    from { background-position: -400px 0; }
+    to { background-position: 400px 0; }
+  }
+}
+
+@utility focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--color-brand-100);
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-gray-25 text-gray-900;
+    font-feature-settings: "cv11", "ss01";
+    overflow-x: clip;
+  }
+  ::selection {
+    background: var(--color-brand-100);
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-gray-100) 0%, var(--color-gray-50) 40%, var(--color-gray-100) 80%);
+  background-size: 800px 100%;
+  animation: var(--animate-shimmer);
+}
+
+.mark-highlight {
+  background: linear-gradient(transparent 55%, var(--color-highlight) 55%, var(--color-highlight) 90%, transparent 90%);
+}

@@ -391,7 +391,7 @@ function IntroHero({
     <section className="overflow-hidden rounded-2xl" style={{ background: `linear-gradient(135deg, ${tone.from} 0%, ${tone.to} 100%)` }}>
       <div className="flex flex-col gap-6 p-5 sm:p-8">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-          <ProjectLogo text={p.logoText} tone={p.logoTone} size="2xl" className="ring-4 ring-white/80" />
+          <ProjectLogo text={p.logoText} tone={p.logoTone} image={p.logoImage} size="2xl" className="ring-4 ring-white/80" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{p.name}</h1>

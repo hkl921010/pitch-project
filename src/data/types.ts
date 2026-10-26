@@ -141,6 +141,8 @@ export interface Project {
   region: string;
   logoTone: number;
   logoText: string;
+  /** 方标。有图就显示图，没有才用 logoText。 */
+  logoImage?: string;
   /** 页头品牌图，通常是 logo 主视觉。 */
   coverImage?: string;
   coverTone: number;

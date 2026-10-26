@@ -136,7 +136,7 @@ interface AppState {
 }
 
 /** 假数据结构或内容变化时递增，旧的本地数据会被替换为新种子。 */
-const SEED_VERSION = 22;
+const SEED_VERSION = 24;
 
 const uid = (prefix: string) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 

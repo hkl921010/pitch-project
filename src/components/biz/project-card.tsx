@@ -44,7 +44,7 @@ export function ProjectCard({ project: p, className, hideFollow }: { project: Pr
       <Link href={`/p/${p.slug}`} className="block">
         {p.coverImage ? <img src={p.coverImage} alt="" className="mb-4 aspect-[2.4/1] w-full rounded-lg object-cover" /> : null}
         <div className="flex items-start gap-3">
-          <ProjectLogo text={p.logoText} tone={p.logoTone} size="lg" />
+          <ProjectLogo text={p.logoText} tone={p.logoTone} image={p.logoImage} size="lg" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-base font-semibold text-gray-900 group-hover:text-brand-700">{p.name}</h3>
@@ -109,7 +109,7 @@ export function ProjectRow({ project: p, meta, right }: { project: Project; meta
   return (
     <div className="flex items-center gap-3">
       <Link href={`/p/${p.slug}`} className="flex min-w-0 flex-1 items-center gap-3">
-        <ProjectLogo text={p.logoText} tone={p.logoTone} size="md" />
+        <ProjectLogo text={p.logoText} tone={p.logoTone} image={p.logoImage} size="md" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-gray-900 hover:text-brand-700">{p.name}</p>
           <p className="truncate text-xs text-gray-500">{meta ?? p.oneLiner}</p>

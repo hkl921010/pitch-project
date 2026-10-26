@@ -142,9 +142,12 @@ export function AvatarGroup({ people, size = "sm", max = 4, more }: { people: { 
   );
 }
 
-export function ProjectLogo({ text, tone, size = "md", className }: { text: string; tone: number; size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl"; className?: string }) {
+export function ProjectLogo({ text, tone, size = "md", image, className }: { text: string; tone: number; size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl"; image?: string; className?: string }) {
   const t = TONES[tone % TONES.length];
   const s = { xs: "h-6 w-6 text-[11px] rounded-md", sm: "h-8 w-8 text-sm rounded-lg", md: "h-10 w-10 text-base rounded-lg", lg: "h-12 w-12 text-lg rounded-xl", xl: "h-16 w-16 text-2xl rounded-2xl", "2xl": "h-20 w-20 text-3xl rounded-2xl" }[size];
+  if (image) {
+    return <img src={image} alt="" className={cn("inline-block shrink-0 bg-white object-contain shadow-xs ring-1 ring-black/5", s, className)} />;
+  }
   return (
     <span
       className={cn("inline-flex shrink-0 items-center justify-center font-bold shadow-xs ring-1 ring-black/5 select-none", s, className)}

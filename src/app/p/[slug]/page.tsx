@@ -7,6 +7,7 @@ import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { FollowButton } from "@/components/biz/follow-button";
 import { ProjectMiniDetail } from "@/app/p/[slug]/mini/page";
+import { ProjectPeerDetail } from "@/app/p/[slug]/peer/page";
 import { ProjectPlainDetail } from "@/app/p/[slug]/plain/page";
 import { IntentBar, IntentCard } from "@/components/biz/intent-card";
 import { needIcon, needLabel, needTone, serviceAction } from "@/components/biz/looking-for";
@@ -24,7 +25,7 @@ import { useApp } from "@/store/app-store";
 import { badgeDefs, canEditProject, canManageProject, followerCount, getPerson, getProjectBySlug, projectCompletion, roleText, useDB, useViewer } from "@/store/selectors";
 
 const SOURCES: TrafficSource[] = ["wechat", "moments", "poster", "discover", "demoday", "article", "direct"];
-const LAYOUTS = ["now", "plain", "mini"] as const;
+const LAYOUTS = ["now", "plain", "mini", "peer"] as const;
 type DetailLayout = (typeof LAYOUTS)[number];
 
 export default function ProjectPage() {
@@ -41,7 +42,7 @@ function ProjectView() {
   const router = useRouter();
   const sp = useSearchParams();
   const layoutParam = sp.get("layout");
-  const layout: DetailLayout = layoutParam === "plain" || layoutParam === "mini" ? layoutParam : "now";
+  const layout: DetailLayout = LAYOUTS.includes(layoutParam as DetailLayout) ? (layoutParam as DetailLayout) : "now";
   const setLayout = (next: DetailLayout) => {
     const params = new URLSearchParams(sp.toString());
     if (next === "now") params.delete("layout");
@@ -144,6 +145,7 @@ function ProjectView() {
               { value: "now", label: "现在这版" },
               { value: "plain", label: "简介亮点" },
               { value: "mini", label: "小程序" },
+              { value: "peer", label: "Peerlist" },
             ]}
           />
         </div>
@@ -273,8 +275,10 @@ function ProjectView() {
           </>
         ) : layout === "plain" ? (
           <ProjectPlainDetail />
-        ) : (
+        ) : layout === "mini" ? (
           <ProjectMiniDetail />
+        ) : (
+          <ProjectPeerDetail />
         )}
       </Page>
       <IntentBar project={p} follow={<FollowButton targetType="project" targetId={p.id} size="md" />} />

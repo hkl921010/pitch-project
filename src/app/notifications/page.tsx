@@ -1,15 +1,12 @@
 "use client";
 
 import {
-  Award,
   Bell,
   BellOff,
   CalendarClock,
   Check,
   CheckCheck,
   Gift,
-  Lightbulb,
-  ListOrdered,
   Mail,
   Megaphone,
   MessageCircle,
@@ -44,13 +41,10 @@ const ICON: Record<NotificationType, { icon: LucideIcon; cls: string }> = {
   conversation: { icon: MessageSquare, cls: "bg-brand-50 text-brand-600" },
   member: { icon: UserPlus, cls: "bg-success-50 text-success-600" },
   officehours: { icon: CalendarClock, cls: "bg-success-50 text-success-600" },
-  feedback: { icon: Lightbulb, cls: "bg-warning-50 text-warning-600" },
   update: { icon: Megaphone, cls: "bg-gray-100 text-gray-600" },
   demoday: { icon: Trophy, cls: "bg-highlight-soft text-highlight-ink" },
-  endorsement: { icon: Award, cls: "bg-highlight-soft text-highlight-ink" },
   reward: { icon: Gift, cls: "bg-highlight-soft text-highlight-ink" },
   system: { icon: Shield, cls: "bg-gray-100 text-gray-600" },
-  list: { icon: ListOrdered, cls: "bg-blue-50 text-blue-600" },
 };
 
 export default function NotificationsPage() {
@@ -83,7 +77,7 @@ function Notifications() {
           <EmptyState
             icon={Bell}
             title="登录后查看通知"
-            desc="意向、对话、背书和项目进展都会出现在这里。"
+            desc="意向、对话和项目进展都会出现在这里。"
             action={
               <Button variant="primary" onClick={() => requireLogin("登录后查看通知")}>
                 登录

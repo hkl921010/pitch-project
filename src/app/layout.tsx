@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Pitch · 项目原型",
-  description: "创始人公开主页 + 统一意向 + 站内对话 + 背书与路演节律",
+  description: "创始人公开主页 + 统一意向 + 站内对话 + 路演节律",
 };
 
 export const viewport: Viewport = {

@@ -4,7 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import { BADGES, INTENT_KIND_LABEL, ROLE_LABEL, TOP_CONTRIBUTOR_TASKS } from "@/data/constants";
 import { monthOf, nowMs } from "@/data/time";
-import type { Conversation, ConversationStatus, DB, DemoDay, Endorsement, Intent, NeedItem, Person, PitchEvent, Project, ProjectUpdate, WatchItem } from "@/data/types";
+import type { Conversation, ConversationStatus, DB, DemoDay, Intent, Person, PitchEvent, Project, ProjectUpdate, WatchItem } from "@/data/types";
 import { computeQuota, useApp } from "./app-store";
 
 export function useDB(): DB {
@@ -56,28 +56,7 @@ export function knownFollowers(db: DB, viewerId: string | null, targetType: "pro
   const known = acquaintances(db, viewerId);
   const ids = new Set<string>();
   db.follows.forEach((f) => f.targetType === targetType && f.targetId === id && known.has(f.userId) && ids.add(f.userId));
-  db.endorsements.forEach((e) => e.targetType === targetType && e.targetId === id && known.has(e.fromId) && ids.add(e.fromId));
   return [...ids].map((x) => getPerson(db, x)).filter(Boolean) as Person[];
-}
-
-export function endorsementsFor(db: DB, targetType: "project" | "person", id: string): Endorsement[] {
-  return db.endorsements.filter((e) => e.targetType === targetType && e.targetId === id);
-}
-
-export function endorsementDimensions(list: Endorsement[]): { dimension: string; count: number; items: Endorsement[] }[] {
-  const map = new Map<string, Endorsement[]>();
-  list.forEach((e) => map.set(e.dimension, [...(map.get(e.dimension) ?? []), e]));
-  return [...map.entries()].map(([dimension, items]) => ({ dimension, count: items.length, items })).sort((a, b) => b.count - a.count);
-}
-
-/** 软认证：有多少位投资人为 TA 背书。 */
-export function investorEndorsers(db: DB, personId: string): number {
-  const ids = new Set(
-    db.endorsements
-      .filter((e) => e.targetType === "person" && e.targetId === personId && getPerson(db, e.fromId)?.role === "investor")
-      .map((e) => e.fromId),
-  );
-  return ids.size;
 }
 
 export function projectsOf(db: DB, personId: string): { project: Project; title: string; isOwner: boolean }[] {
@@ -111,31 +90,16 @@ export interface CompletionItem {
 export function projectCompletion(p: Project): { items: CompletionItem[]; percent: number; remaining: number } {
   const items: CompletionItem[] = [
     { key: "basic", label: "名称、一句话与赛道", done: !!(p.name.trim() && p.oneLiner.trim() && p.track), hint: "发现页卡片上最先被看到的三样" },
-    { key: "logo", label: "Logo 与封面", done: p.gallery.length > 0, hint: "第一眼的印象，至少一张图" },
-    { key: "intro", label: "项目介绍", done: p.intro.trim().length >= 30, hint: "讲清楚在做什么、做到哪了" },
+    { key: "intro", label: "项目简介", done: p.intro.trim().length >= 30, hint: "第一屏就讲清在做什么" },
     { key: "product", label: "在卖什么", done: p.product.trim().length > 0, hint: "产品、价格、谁在买" },
     { key: "edge", label: "凭什么", done: p.edge.trim().length > 0, hint: "团队或数据上的优势" },
-    { key: "looking", label: "正在寻找", done: p.lookingFor.length > 0, hint: "融资、合作、招人，让对的人找到你" },
+    { key: "looking", label: "正在寻找", done: p.lookingFor.some((n) => n.coop && n.title.trim() && (n.terms ?? "").trim()), hint: "供应链、渠道或融资，并写清合作方式" },
     { key: "team", label: "团队成员", done: p.team.filter((t) => t.status === "confirmed").length >= 2, hint: "邀请合伙人，项目会出现在他们主页上" },
     { key: "contact", label: "联系方式", done: !!(p.contact.wechat || p.contact.phone || p.contact.email), hint: "只在对话中按需分享" },
     { key: "update", label: "第一条动态", done: p.updates.length > 0, hint: "让关注者知道你在前进" },
   ];
   const doneCount = items.filter((i) => i.done).length;
   return { items, percent: Math.round((doneCount / items.length) * 100), remaining: items.length - doneCount };
-}
-
-export interface NeedWithOwner {
-  need: NeedItem;
-  project?: Project;
-  person?: Person;
-}
-
-export function allNeeds(db: DB): NeedWithOwner[] {
-  const fromProjects = db.projects
-    .filter((p) => p.visibility === "public" && p.wall === "approved")
-    .flatMap((p) => p.lookingFor.map((need) => ({ need, project: p, person: getPerson(db, p.ownerId) })));
-  const fromPeople = db.people.flatMap((person) => person.lookingFor.map((need) => ({ need, person })));
-  return [...fromProjects, ...fromPeople].sort((a, b) => b.need.createdAt.localeCompare(a.need.createdAt));
 }
 
 export function intentsReceived(db: DB, viewerId: string | null): Intent[] {
@@ -248,10 +212,9 @@ export function bestContributionMonth(db: DB, userId: string): { month: string |
   return best;
 }
 
-/** 个人徽章：由背书、贡献、早期成员等派生。 */
+/** 个人徽章：由关注、贡献、早期成员等派生。 */
 export function personBadges(db: DB, person: Person): string[] {
   const out: string[] = [];
-  if (endorsementsFor(db, "person", person.id).length >= 10) out.push("endorsed_10");
   if (followerCount(db, "person", person.id) >= 100) out.push("followers_100");
   if (bestContributionMonth(db, person.id).count >= TOP_CONTRIBUTOR_TASKS) out.push("top_contributor");
   if (person.joinedAt < "2026-01-01") out.push("early_member");
@@ -342,13 +305,13 @@ export function firstSteps(db: DB, viewer: Person): FirstStep[] {
     case "talent":
       return [
         { key: "status", title: "设置开放状态", desc: "开放合伙、全职还是顾问？项目方会按这个来找你", done: !!viewer.openStatus.talent?.openTo.length, href: `/u/${viewer.handle}?edit=status`, cta: "去设置" },
-        { key: "follow", title: "关注 3 个感兴趣的项目", desc: "项目招人、发动态时你会第一个知道", done: follows >= 3, href: "/discover", cta: "去发现页" },
-        { key: "join", title: "向一个在招的项目表达意向", desc: "可以选择具体岗位，对方接受后直接对话", done: sent.some((i) => i.kind === "join"), href: "/discover?tab=needs&kind=join", cta: "看在招岗位" },
+        { key: "follow", title: "关注 3 个感兴趣的项目", desc: "项目写下新的合作时，你会在发现页看到", done: follows >= 3, href: "/discover", cta: "去发现页" },
+        { key: "join", title: "看一个项目的合作方式", desc: "打开项目页，看清对方要供应链、渠道还是融资", done: sent.some((i) => i.kind === "partner" || i.kind === "invest"), href: "/discover", cta: "去发现页" },
       ];
     case "partner":
       return [
         { key: "offers", title: "写下你能提供的资源", desc: "渠道、流量、服务……项目方会在你主页上看到", done: !!viewer.openStatus.offers?.length, href: `/u/${viewer.handle}?edit=status`, cta: "去填写" },
-        { key: "needs", title: "回应一条合作需求", desc: "发现页“需求”里汇总了项目和个人正在寻找的合作", done: sent.some((i) => i.kind === "partner" || i.kind === "help"), href: "/discover?tab=needs&kind=partner", cta: "看合作需求" },
+        { key: "needs", title: "看一个项目的合作方式", desc: "打开项目页，看清对方怎么谈供应链、渠道或融资", done: sent.some((i) => i.kind === "partner" || i.kind === "help"), href: "/discover", cta: "去发现页" },
         { key: "follow", title: "关注 3 个项目", desc: "项目有新进展时，你会收到通知和周报", done: follows >= 3, href: "/discover", cta: "去发现页" },
       ];
     default:
@@ -361,8 +324,7 @@ export function anonymousProfile(db: DB, person: Person | undefined): string {
   if (!person) return "一位用户";
   const role = person.role ? ROLE_LABEL[person.role] : "用户";
   const pref = person.openStatus.investor?.tracks.slice(0, 2).join(" · ");
-  const endorsed = investorEndorsers(db, person.id);
-  return [`一位${person.openStatus.investor?.stages[0] ? "早期" : ""}${role}`, pref ? `关注 ${pref}` : "", endorsed ? `被 ${endorsed} 位投资人背书` : ""]
+  return [`一位${person.openStatus.investor?.stages[0] ? "早期" : ""}${role}`, pref ? `关注 ${pref}` : ""]
     .filter(Boolean)
     .join("，");
 }

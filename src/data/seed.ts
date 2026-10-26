@@ -1,4 +1,5 @@
 import type { DB } from "./types";
+import { casePeople } from "./seed-cases";
 import { seedPeople } from "./seed-people";
 import { seedProjects } from "./seed-projects";
 import {
@@ -7,12 +8,9 @@ import {
   seedContributions,
   seedConversations,
   seedDemoDays,
-  seedEndorsements,
   seedEvents,
-  seedFeedback,
   seedFollows,
   seedIntents,
-  seedLists,
   seedNews,
   seedNotifications,
   seedNotifyPrefs,
@@ -23,18 +21,15 @@ import {
 export function createSeed(): DB {
   const clone = <T,>(v: T): T => structuredClone(v);
   return {
-    people: clone(seedPeople).map((p) => ({ ...p, followerBase: FOLLOWER_BASE[p.id] ?? 0 })),
+    people: clone([...casePeople, ...seedPeople]).map((p) => ({ ...p, followerBase: FOLLOWER_BASE[p.id] ?? 0 })),
     projects: clone(seedProjects).map((p) => ({ ...p, followerBase: FOLLOWER_BASE[p.id] ?? 0 })),
     intents: clone(seedIntents),
     conversations: clone(seedConversations),
     follows: clone(seedFollows),
-    endorsements: clone(seedEndorsements),
-    feedback: clone(seedFeedback),
     watch: clone(seedWatch),
     events: clone(seedEvents),
     articles: clone(seedArticles),
     news: clone(seedNews),
-    lists: clone(seedLists),
     demoDays: clone(seedDemoDays),
     notifications: clone(seedNotifications).map((n) => {
       const prefs = seedNotifyPrefs.find((p) => p.userId === n.userId);

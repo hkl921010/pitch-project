@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ChipSelect, Field, Input, Select, Textarea, Toggle } from "@/components/ui/form";
-import { Drawer, Modal } from "@/components/ui/overlay";
+import { Drawer } from "@/components/ui/overlay";
 import { REGIONS, STAGES, TRACKS } from "@/data/constants";
 import type { OpenStatus, PartnerOffer, Person } from "@/data/types";
 import { useApp } from "@/store/app-store";
@@ -15,7 +15,6 @@ import { manageableProjects, useDB } from "@/store/selectors";
 const OPEN_TO = ["合伙人", "全职", "兼职顾问"] as const;
 const TALENT_ROLES = ["增长", "海外市场", "本地化运营", "产品", "全栈", "AI 工程", "供应链", "设计", "财务"] as const;
 const AVAILABILITY = ["随时", "两周内可到岗", "一个月内可到岗", "暂不考虑全职"] as const;
-export const PERSON_NEED_SUBS = ["找人脉", "求工具", "求经验", "其他"] as const;
 
 /** 开放状态编辑：按身份展示不同字段；保存即刷新“更新于”，并计入当月贡献任务。 */
 export function OpenStatusDrawer({ person, open, onClose }: { person: Person; open: boolean; onClose: () => void }) {
@@ -235,54 +234,4 @@ export function ProfileDrawer({ person, open, onClose }: { person: Person; open:
 
 function pickProfile(p: Person) {
   return { name: p.name, title: p.title, org: p.org, city: p.city, bio: p.bio, oneLiner: p.doingNow?.oneLiner ?? "", info: p.doingNow?.info ?? "", highlights: p.doingNow?.highlights ?? "" };
-}
-
-/** 个人“正在寻找”（原心愿墙的找人脉、求工具）。 */
-export function AddNeedModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const add = useApp((s) => s.addPersonNeed);
-  const toast = useApp((s) => s.toast);
-  const [sub, setSub] = useState<string[]>(["找人脉"]);
-  const [title, setTitle] = useState("");
-  const [detail, setDetail] = useState("");
-  const [tried, setTried] = useState(false);
-  const close = () => {
-    setSub(["找人脉"]);
-    setTitle("");
-    setDetail("");
-    setTried(false);
-    onClose();
-  };
-  return (
-    <Modal
-      open={open}
-      onClose={close}
-      title="写下你正在寻找的"
-      desc="会出现在你的主页和发现页“需求”里，能帮上忙的人可以直接回应你。"
-      footer={
-        <>
-          <Button onClick={close}>取消</Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setTried(true);
-              if (title.trim().length < 4) return;
-              add({ kind: "help", sub: sub[0], title: title.trim(), detail: detail.trim() || undefined });
-              toast({ tone: "success", title: "已发布", body: "可以在发现页“需求”里看到" });
-              close();
-            }}
-          >
-            发布
-          </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        <Field label="类型">
-          <ChipSelect size="sm" options={PERSON_NEED_SUBS} value={sub} onChange={(v) => setSub(v.length ? v : sub)} />
-        </Field>
-        <Input label="一句话" required maxCount={30} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="比如：想认识懂马来西亚商场招商的朋友" error={tried && title.trim().length < 4 ? "至少 4 个字" : undefined} />
-        <Input label="补充" maxCount={60} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="选填：背景、时间要求" />
-      </div>
-    </Modal>
-  );
 }

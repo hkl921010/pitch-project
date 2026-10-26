@@ -2,7 +2,6 @@
 
 import {
   ArrowLeft,
-  Briefcase,
   Check,
   CheckCircle2,
   Copy,
@@ -25,7 +24,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { BPUpload } from "@/components/biz/bp-upload";
-import { LookingForChips } from "@/components/biz/looking-for";
+import { kindFromCoop, LookingForChips } from "@/components/biz/looking-for";
 import { ProjectCard } from "@/components/biz/project-card";
 import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
@@ -34,13 +33,13 @@ import { ChipSelect, Field, Input, RadioCards, Select, Textarea } from "@/compon
 import { ConfirmModal, Drawer } from "@/components/ui/overlay";
 import { Segmented } from "@/components/ui/tabs";
 import { bpAsPrefill, type BPExtract } from "@/data/ai-prefill";
-import { NEED_KIND_LABEL, PARTNER_SUBS, REGIONS, STAGES, TONES, TRACKS } from "@/data/constants";
-import type { IntentKind, Job, NeedItem, Project } from "@/data/types";
+import { COOP_LABEL, COOP_ORDER, REGIONS, SERVICE_LABEL, SERVICE_ORDER, STAGES, TONES, TRACKS } from "@/data/constants";
+import type { CoopKind, NeedItem, Project, ServiceKind } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useApp } from "@/store/app-store";
 import { canEditProject, getProjectBySlug, projectCompletion, useDB, useViewer } from "@/store/selectors";
 
-const EDITABLE = ["name", "oneLiner", "track", "region", "tags", "website", "visibility", "logoText", "logoTone", "coverTone", "gallery", "intro", "product", "edge", "lookingFor", "jobs", "contact"] as const;
+const EDITABLE = ["name", "oneLiner", "track", "region", "tags", "website", "visibility", "logoText", "logoTone", "coverTone", "gallery", "intro", "product", "edge", "lookingFor", "contact"] as const;
 type Draft = Pick<Project, (typeof EDITABLE)[number]>;
 
 const pick = (p: Project): Draft => Object.fromEntries(EDITABLE.map((k) => [k, structuredClone(p[k])])) as Draft;
@@ -49,14 +48,14 @@ const SECTIONS = [
   { id: "basic", label: "基本信息" },
   { id: "gallery", label: "Logo 与图集" },
   { id: "about", label: "关于项目" },
-  { id: "looking", label: "正在寻找" },
-  { id: "jobs", label: "在招岗位" },
+  { id: "looking", label: "寻找合作" },
+  { id: "services", label: "寻找服务" },
   { id: "contact", label: "联系方式" },
 ];
 
 /** 完成度清单项 → 编辑页锚点（团队、动态在工作台完成） */
 const ITEM_TARGET: Record<string, { anchor?: string; href?: (slug: string) => string }> = {
-  logo: { anchor: "gallery" },
+  logo: { anchor: "about" },
   intro: { anchor: "about" },
   product: { anchor: "about" },
   edge: { anchor: "about" },
@@ -149,10 +148,9 @@ function EditView() {
   const errors = {
     name: !draft.name.trim() ? "项目名称不能为空" : undefined,
     oneLiner: !draft.oneLiner.trim() ? "一句话介绍不能为空" : undefined,
-    needs: draft.lookingFor.some((n) => !n.title.trim()),
-    jobs: draft.jobs.some((j) => !j.title.trim()),
+    needs: draft.lookingFor.some((n) => (!n.coop && !n.service) || !n.title.trim() || !(n.terms ?? "").trim()),
   };
-  const valid = !errors.name && !errors.oneLiner && !errors.needs && !errors.jobs;
+  const valid = !errors.name && !errors.oneLiner && !errors.needs;
 
   const save = (then?: string) => {
     setTried(true);
@@ -262,7 +260,7 @@ function EditView() {
                 value={draft.visibility}
                 onChange={(v) => set("visibility", v)}
                 options={[
-                  { value: "public", title: "公开", desc: "可申请上发现页、榜单和月度路演", icon: Globe },
+                  { value: "public", title: "公开", desc: "可申请上发现页和月度路演", icon: Globe },
                   { value: "link", title: "仅持链接可见", desc: "不出现在发现页，链接仍可访问", icon: Link2 },
                 ]}
               />
@@ -296,12 +294,12 @@ function EditView() {
             <Textarea label="凭什么" rows={3} maxCount={200} value={draft.edge} onChange={(e) => set("edge", e.target.value)} placeholder="团队背景、成本或数据上的优势" />
           </Section>
 
-          <Section id="looking" title="正在寻找" desc="每一条都会带上对应的按钮，对的人可以直接表达意向">
-            <NeedsEditor needs={draft.lookingFor} projectId={project.id} onChange={(v) => set("lookingFor", v)} showErrors={tried} />
+          <Section id="looking" title="寻找合作" desc="供应链、渠道或融资。每条写清在找什么，以及愿意付出什么。">
+            <NeedsEditor group="coop" needs={draft.lookingFor} projectId={project.id} onChange={(v) => set("lookingFor", v)} showErrors={tried} />
           </Section>
 
-          <Section id="jobs" title="在招岗位" desc="人才在发现页的“需求”和首页会看到，可以一键“我想加入”">
-            <JobsEditor jobs={draft.jobs} onChange={(v) => set("jobs", v)} showErrors={tried} />
+          <Section id="services" title="寻找服务" desc="自己花钱买的：朋友、新媒体、招人，或其他。写清要什么，以及愿意付多少。">
+            <NeedsEditor group="service" needs={draft.lookingFor} projectId={project.id} onChange={(v) => set("lookingFor", v)} showErrors={tried} />
           </Section>
 
           <Section id="contact" title="联系方式" desc="不会公开展示。对话中由你决定是否分享给对方">
@@ -515,83 +513,124 @@ function GalleryEditor({ items, onChange }: { items: Project["gallery"]; onChang
   );
 }
 
-const NEED_KINDS: IntentKind[] = ["invest", "partner", "join", "other"];
+const COOP_PLACEHOLDER: Record<CoopKind, { title: string; detail: string; terms: string }> = {
+  supply: { title: "比如：冷泡瓶装茶代工", detail: "要什么类型的工厂或货", terms: "首单多少、怎么结算、双方各负责什么" },
+  channel: { title: "比如：东南亚便利店与商超", detail: "要引进哪个市场、什么渠道", terms: "给多少分成，进场后谁负责铺货" },
+  funding: { title: "比如：天使+轮，用于 8 家门店", detail: "希望投资方有什么背景", terms: "融多少、估值多少、这笔钱对应多少结果" },
+};
 
-function NeedsEditor({ needs, projectId, onChange, showErrors }: { needs: NeedItem[]; projectId: string; onChange: (v: NeedItem[]) => void; showErrors: boolean }) {
-  const patch = (id: string, p: Partial<NeedItem>) => onChange(needs.map((n) => (n.id === id ? { ...n, ...p } : n)));
-  const add = (kind: IntentKind) =>
-    onChange([...needs, { id: `n-${Math.random().toString(36).slice(2, 8)}`, ownerType: "project", ownerId: projectId, kind, title: "", createdAt: new Date().toISOString() }]);
+const SERVICE_PLACEHOLDER: Record<ServiceKind, { title: string; detail: string; terms: string }> = {
+  friend: { title: "比如：熟悉吉隆坡商场招商的朋友", detail: "能介绍什么人、什么资源", terms: "介绍成功怎么付，比如按次咨询费" },
+  media: { title: "比如：泰国社媒代运营", detail: "要什么样的内容团队", terms: "按月多少钱，双方各做什么" },
+  hiring: { title: "比如：新加坡店长", detail: "要什么样的人", terms: "薪资或预算，做到什么算完成" },
+  other: { title: "比如：品牌视觉设计", detail: "要交付什么", terms: "预算多少，按项目还是按月" },
+};
+
+function replaceGroup(all: NeedItem[], mineIds: Set<string>, next: NeedItem[]) {
+  const out: NeedItem[] = [];
+  let inserted = false;
+  for (const n of all) {
+    if (!mineIds.has(n.id)) out.push(n);
+    else if (!inserted) {
+      out.push(...next);
+      inserted = true;
+    }
+  }
+  if (!inserted) out.push(...next);
+  return out;
+}
+
+function NeedsEditor({ group, needs, projectId, onChange, showErrors }: { group: "coop" | "service"; needs: NeedItem[]; projectId: string; onChange: (v: NeedItem[]) => void; showErrors: boolean }) {
+  const mine = needs.filter((n) => (group === "service" ? !!n.service : !!n.coop && !n.service));
+  const mineIds = new Set(mine.map((n) => n.id));
+  const commit = (next: NeedItem[]) => onChange(replaceGroup(needs, mineIds, next));
+  const patch = (id: string, p: Partial<NeedItem>) => commit(mine.map((n) => (n.id === id ? { ...n, ...p } : n)));
+  const addCoop = (coop: CoopKind) =>
+    commit([...mine, { id: `n-${Math.random().toString(36).slice(2, 8)}`, ownerType: "project", ownerId: projectId, kind: kindFromCoop(coop), coop, title: "", terms: "", createdAt: new Date().toISOString() }]);
+  const addService = (service: ServiceKind) =>
+    commit([...mine, { id: `n-${Math.random().toString(36).slice(2, 8)}`, ownerType: "project", ownerId: projectId, kind: "partner", service, title: "", terms: "", createdAt: new Date().toISOString() }]);
   return (
     <div className="flex flex-col gap-3">
-      {needs.length === 0 ? (
-        <p className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">还没写。写清楚要融资、渠道还是合伙人，项目页、发现页“需求”和首页推荐都会用到它。</p>
+      {mine.length === 0 ? (
+        <p className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
+          {group === "service" ? "还没写。比如找朋友介绍、新媒体代运营，或招人。写清愿意付多少。" : "还没写。每条写清在找什么，以及愿意付出的分成、报价或融资条件。"}
+        </p>
       ) : (
-        needs.map((n) => (
-          <div key={n.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Segmented<IntentKind> size="sm" value={n.kind} onChange={(k) => patch(n.id, { kind: k, sub: undefined })} items={NEED_KINDS.map((k) => ({ value: k, label: NEED_KIND_LABEL[k] }))} />
-              <Button size="xs" variant="tertiary" iconOnly={Trash2} onClick={() => onChange(needs.filter((x) => x.id !== n.id))} className="ml-auto" aria-label="删除这条" />
+        mine.map((n) => {
+          const coop = n.coop ?? "channel";
+          const service = n.service ?? "other";
+          const hint = group === "service" ? SERVICE_PLACEHOLDER[service] : COOP_PLACEHOLDER[coop];
+          return (
+            <div key={n.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                {group === "service" ? (
+                  <Segmented<ServiceKind>
+                    size="sm"
+                    value={service}
+                    onChange={(next) => patch(n.id, { service: next, coop: undefined, kind: "partner", sub: undefined })}
+                    items={SERVICE_ORDER.map((k) => ({ value: k, label: SERVICE_LABEL[k] }))}
+                  />
+                ) : (
+                  <Segmented<CoopKind>
+                    size="sm"
+                    value={coop}
+                    onChange={(next) => patch(n.id, { coop: next, service: undefined, kind: kindFromCoop(next), sub: next === "funding" ? n.sub : undefined })}
+                    items={COOP_ORDER.map((k) => ({ value: k, label: COOP_LABEL[k] }))}
+                  />
+                )}
+                <Button size="xs" variant="tertiary" iconOnly={Trash2} onClick={() => commit(mine.filter((x) => x.id !== n.id))} className="ml-auto" aria-label="删除这条" />
+              </div>
+              {group === "coop" && coop === "funding" ? (
+                <Field label="轮次">
+                  <ChipSelect
+                    size="sm"
+                    options={n.sub && !(STAGES as readonly string[]).includes(n.sub) ? [n.sub, ...STAGES] : STAGES}
+                    value={n.sub ? [n.sub] : []}
+                    onChange={(v) => patch(n.id, { sub: v[0] })}
+                  />
+                </Field>
+              ) : null}
+              <Input
+                label="在找什么"
+                required
+                maxCount={30}
+                value={n.title}
+                onChange={(e) => patch(n.id, { title: e.target.value })}
+                placeholder={hint.title}
+                error={showErrors && !n.title.trim() ? "写清在找什么" : undefined}
+              />
+              <Textarea label="要找的对象" rows={2} maxCount={80} value={n.detail ?? ""} onChange={(e) => patch(n.id, { detail: e.target.value })} placeholder={hint.detail} />
+              <Textarea
+                label={group === "service" ? "愿意付多少" : "合作方式"}
+                required
+                rows={3}
+                maxCount={160}
+                value={n.terms ?? ""}
+                onChange={(e) => patch(n.id, { terms: e.target.value })}
+                placeholder={hint.terms}
+                error={showErrors && !(n.terms ?? "").trim() ? (group === "service" ? "写清预算和怎么结算" : "写清分成、报价或这笔钱对应什么") : undefined}
+              />
             </div>
-            {n.kind === "invest" ? (
-              <Field label="轮次">
-                <ChipSelect size="sm" options={STAGES} value={n.sub ? [n.sub] : []} onChange={(v) => patch(n.id, { sub: v[0] })} />
-              </Field>
-            ) : n.kind === "partner" ? (
-              <Field label="合作方向">
-                <ChipSelect size="sm" options={PARTNER_SUBS} value={n.sub ? [n.sub] : []} onChange={(v) => patch(n.id, { sub: v[0] })} />
-              </Field>
-            ) : null}
-            <Input
-              label="一句话说明"
-              required
-              maxCount={30}
-              value={n.title}
-              onChange={(e) => patch(n.id, { title: e.target.value })}
-              placeholder={n.kind === "invest" ? "比如：天使+轮融资，用于东南亚 8 家门店扩张" : n.kind === "partner" ? "比如：东南亚 KA 渠道：便利店与商超" : n.kind === "join" ? "比如：海外市场负责人" : "比如：找一位懂跨境税务的顾问"}
-              error={showErrors && !n.title.trim() ? "写一句话说明" : undefined}
-            />
-            <Input label="补充" value={n.detail ?? ""} onChange={(e) => patch(n.id, { detail: e.target.value })} placeholder="选填：希望对方有什么背景、时间要求等" maxCount={60} />
-          </div>
-        ))
+          );
+        })
       )}
-      {needs.length < 5 ? (
+      {mine.length < 5 ? (
         <div className="flex flex-wrap gap-2">
-          {NEED_KINDS.map((k) => (
-            <Button key={k} size="sm" variant="secondary" iconLeft={Plus} onClick={() => add(k)}>
-              {NEED_KIND_LABEL[k]}
-            </Button>
-          ))}
+          {group === "service"
+            ? SERVICE_ORDER.map((k) => (
+                <Button key={k} size="sm" variant="secondary" iconLeft={Plus} onClick={() => addService(k)}>
+                  {SERVICE_LABEL[k]}
+                </Button>
+              ))
+            : COOP_ORDER.map((k) => (
+                <Button key={k} size="sm" variant="secondary" iconLeft={Plus} onClick={() => addCoop(k)}>
+                  {COOP_LABEL[k]}
+                </Button>
+              ))}
         </div>
       ) : (
         <p className="text-xs text-gray-500">最多 5 条，聚焦最重要的。</p>
       )}
-    </div>
-  );
-}
-
-function JobsEditor({ jobs, onChange, showErrors }: { jobs: Job[]; onChange: (v: Job[]) => void; showErrors: boolean }) {
-  const patch = (id: string, p: Partial<Job>) => onChange(jobs.map((j) => (j.id === id ? { ...j, ...p } : j)));
-  return (
-    <div className="flex flex-col gap-3">
-      {jobs.map((j) => (
-        <div key={j.id} className="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 p-4 sm:grid-cols-[minmax(0,1fr)_140px_160px_auto]">
-          <Input label="岗位" required value={j.title} onChange={(e) => patch(j.id, { title: e.target.value })} placeholder="比如：海外市场负责人" error={showErrors && !j.title.trim() ? "填写岗位名称" : undefined} />
-          <Select label="类型" value={j.type} onChange={(e) => patch(j.id, { type: e.target.value as Job["type"] })} options={["全职", "合伙人", "兼职顾问"].map((t) => ({ value: t, label: t }))} />
-          <Input label="地点" value={j.location} onChange={(e) => patch(j.id, { location: e.target.value })} placeholder="城市 / 远程" />
-          <Button size="sm" variant="tertiary" iconOnly={Trash2} onClick={() => onChange(jobs.filter((x) => x.id !== j.id))} className="self-end" aria-label="删除岗位" />
-          <Input label="说明" value={j.desc} onChange={(e) => patch(j.id, { desc: e.target.value })} placeholder="负责什么、需要什么经验、给什么回报" wrapperClassName="sm:col-span-4" />
-        </div>
-      ))}
-      {jobs.length === 0 ? <p className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">暂时不招人可以跳过。</p> : null}
-      <Button
-        size="sm"
-        variant="secondary"
-        iconLeft={Briefcase}
-        className="self-start"
-        onClick={() => onChange([...jobs, { id: `j-${Math.random().toString(36).slice(2, 8)}`, title: "", type: "全职", location: "", desc: "" }])}
-      >
-        添加岗位
-      </Button>
     </div>
   );
 }
@@ -654,7 +693,7 @@ function PreviewCard({ project, bare }: { project: Project; bare?: boolean }) {
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <Cover tone={project.gallery[0]?.tone ?? project.coverTone} label={project.gallery[0]?.caption} className="h-28" />
+          <Cover tone={project.coverTone} className="h-16" />
           <div className="px-4 pb-4">
             <ProjectLogo text={project.logoText || project.name.slice(0, 1)} tone={project.logoTone} size="xl" className="relative z-10 -mt-7 ring-4 ring-white" />
             <p className="mt-2 text-lg font-semibold text-gray-900">{project.name || "项目名称"}</p>

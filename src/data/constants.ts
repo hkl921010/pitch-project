@@ -1,4 +1,4 @@
-import type { DigestFrequency, IntentKind, MatchStage, NotificationType, Role, TrafficSource, UpdateTemplate, WatchRemind } from "./types";
+import type { CoopKind, DigestFrequency, IntentKind, MatchStage, NotificationType, Role, ServiceKind, TrafficSource, UpdateTemplate, WatchRemind } from "./types";
 
 /** 原型的“当前时间”，所有相对时间、额度周期、活动状态都以它为准。 */
 export const NOW = "2026-10-21T18:00:00+08:00";
@@ -23,6 +23,7 @@ export const TRACKS = [
   "消费品牌",
   "AI 应用",
   "智能硬件",
+  "医疗健康",
   "新能源",
   "企业服务",
   "美妆个护",
@@ -54,10 +55,22 @@ export const NEED_KIND_LABEL: Record<IntentKind, string> = {
 
 export const PARTNER_SUBS = ["渠道", "流量", "品牌", "服务"] as const;
 
-export const PERSON_DIMENSIONS = ["出海渠道", "供应链", "品牌营销", "产品", "技术", "融资", "组织管理", "行业洞察"] as const;
-export const PROJECT_DIMENSIONS = ["产品力", "团队", "增长", "商业模式", "出海潜力"] as const;
+export const COOP_LABEL: Record<CoopKind, string> = {
+  supply: "供应链",
+  channel: "渠道",
+  funding: "融资",
+};
 
-export const FEEDBACK_CATEGORIES = ["产品", "市场", "团队", "其他"] as const;
+export const COOP_ORDER: CoopKind[] = ["supply", "channel", "funding"];
+
+export const SERVICE_LABEL: Record<ServiceKind, string> = {
+  friend: "朋友",
+  media: "新媒体",
+  hiring: "招人",
+  other: "其他",
+};
+
+export const SERVICE_ORDER: ServiceKind[] = ["friend", "media", "hiring", "other"];
 
 export const UPDATE_TEMPLATES: Record<UpdateTemplate, { label: string; title: string; placeholder: string }> = {
   launch: { label: "上线", title: "我们上线了：", placeholder: "上线了什么？用户可以在哪里体验？" },
@@ -90,12 +103,9 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; group
   conversation: { label: "对话", group: "deal", desc: "对话里的新消息、撮合进展" },
   member: { label: "成员邀请", group: "deal", desc: "邀请你加入项目，或对方确认了邀请" },
   officehours: { label: "答疑预约", group: "deal", desc: "预约、确认和开始前提醒" },
-  feedback: { label: "建议", group: "project", desc: "项目收到建议，或你的建议被标记有用" },
   update: { label: "项目动态", group: "project", desc: "关注和观察的项目发布了动态" },
   demoday: { label: "月度路演", group: "project", desc: "入围、投票开放和结果" },
-  endorsement: { label: "背书", group: "me", desc: "有人为你或你的项目写了背书" },
   reward: { label: "奖励", group: "me", desc: "贡献任务完成、获得徽章" },
-  list: { label: "榜单", group: "me", desc: "你或你的项目被收录进榜单，关注的榜单有新内容" },
   system: { label: "系统", group: "system", desc: "审核结果和账号相关的通知" },
 };
 
@@ -130,9 +140,8 @@ export const BADGES: Record<string, BadgeDef> = {
   demoday_shortlist: { id: "demoday_shortlist", label: "路演入围", desc: "入围 Pitch 月度路演", tone: "brand" },
   pitch_featured: { id: "pitch_featured", label: "Pitch 报道", desc: "被 Pitch 专栏报道过", tone: "brand" },
   followers_100: { id: "followers_100", label: "100 关注", desc: "获得 100 位用户关注", tone: "success" },
-  endorsed_10: { id: "endorsed_10", label: "10 人背书", desc: "获得 10 条署名背书", tone: "success" },
   fast_responder: { id: "fast_responder", label: "回复迅速", desc: "近 30 天意向平均 24 小时内回复", tone: "blue" },
-  top_contributor: { id: "top_contributor", label: "社区贡献者", desc: "单月完成至少 4 项贡献任务", tone: "highlight" },
+  top_contributor: { id: "top_contributor", label: "社区贡献者", desc: "单月完成至少 3 项贡献任务", tone: "highlight" },
   early_member: { id: "early_member", label: "早期成员", desc: "Pitch 社区早期成员", tone: "gray" },
 };
 
@@ -150,15 +159,13 @@ export const DEMO_VOTES = 3;
 export const MONTHLY_FREE_INTENTS = 5;
 
 export const CONTRIBUTION_TASKS = [
-  { action: "feedback", label: "给一个项目写一条有内容的建议", desc: "至少 10 个字，默认只有项目方能看到", reward: 1 },
-  { action: "endorse", label: "为你认可的人或项目写一条背书", desc: "署名、只写正向评价，不能给自己或自己的项目写", reward: 1 },
   { action: "vote", label: "在本月路演为项目投票", desc: "不能投自己参与的项目，撤回不会扣回奖励", reward: 1 },
   { action: "update", label: "为你的项目发布一条动态", desc: "关注者和观察这个项目的投资人会收到提醒", reward: 1 },
   { action: "status_refresh", label: "刷新本月的开放状态", desc: "让别人知道你现在在找什么、能提供什么", reward: 1 },
 ] as const;
 
 /** 单月完成这么多项贡献任务，获得“社区贡献者”徽章，之后一直保留。 */
-export const TOP_CONTRIBUTOR_TASKS = 4;
+export const TOP_CONTRIBUTOR_TASKS = 3;
 
 /** 头像、Logo、封面用的色调，用渐变代替真实图片，保证离线可用。 */
 export const TONES = [

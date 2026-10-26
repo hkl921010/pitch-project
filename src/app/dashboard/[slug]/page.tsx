@@ -6,7 +6,7 @@ import { Suspense } from "react";
 
 import { ReceivedIntentList } from "@/components/biz/intent-list";
 import { EXPOSURE_MIN_COMPLETION, ExposurePanel, OverviewPanel, SharePanel, WallBadge, type WorkspaceTab } from "@/components/biz/workspace";
-import { FeedbackPanel, TEAM_ROLE, TeamPanel, UpdatesPanel } from "@/components/biz/workspace-manage";
+import { TEAM_ROLE, TeamPanel, UpdatesPanel } from "@/components/biz/workspace-manage";
 import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, EmptyState, ProjectLogo } from "@/components/ui/display";
@@ -72,7 +72,6 @@ function DashboardView() {
   const mine = db.projects.filter((p) => p.team.some((t) => t.personId === viewer.id && t.status === "confirmed" && t.role !== "member"));
   const intents = db.intents.filter((i) => i.projectId === project.id);
   const pending = intents.filter((i) => i.status === "pending").length;
-  const feedbackTodo = db.feedback.filter((f) => f.projectId === project.id && !f.reply && !f.helpful).length;
   const invited = project.team.filter((t) => t.status === "invited").length;
   const completion = projectCompletion(project);
   const locked = !manage && MANAGER_ONLY.includes(tab);
@@ -151,7 +150,6 @@ function DashboardView() {
           { value: "intents", label: tabLabel("intents", "意向"), count: manage ? pending || undefined : undefined },
           { value: "team", label: tabLabel("team", "成员"), count: project.team.filter((t) => t.status === "confirmed").length, dot: manage && invited > 0 },
           { value: "updates", label: "动态", count: project.updates.length },
-          { value: "feedback", label: "建议", count: feedbackTodo || undefined },
           { value: "exposure", label: tabLabel("exposure", "曝光"), dot: manage && project.wall === "none" && completion.percent >= EXPOSURE_MIN_COMPLETION },
           { value: "share", label: "分享物料" },
         ]}
@@ -160,7 +158,7 @@ function DashboardView() {
       <div className="mt-6">
         {locked ? (
           <Card>
-            <EmptyState icon={Lock} title="需要管理员权限" desc="意向、成员和曝光申请由创建者或管理员处理。你可以编辑资料、发动态和处理建议。" />
+            <EmptyState icon={Lock} title="需要管理员权限" desc="意向、成员和曝光申请由创建者或管理员处理。你可以编辑资料和发动态。" />
           </Card>
         ) : tab === "intents" ? (
           <div className="flex flex-col gap-4">
@@ -184,8 +182,6 @@ function DashboardView() {
           <TeamPanel project={project} viewerId={viewer.id} />
         ) : tab === "updates" ? (
           <UpdatesPanel project={project} />
-        ) : tab === "feedback" ? (
-          <FeedbackPanel project={project} />
         ) : tab === "exposure" ? (
           <ExposurePanel project={project} onTab={setTab} />
         ) : tab === "share" ? (

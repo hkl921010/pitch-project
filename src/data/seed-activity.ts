@@ -2,10 +2,7 @@ import type {
   Article,
   Contribution,
   Conversation,
-  CuratedList,
   DemoDay,
-  Endorsement,
-  Feedback,
   Follow,
   Intent,
   NewsItem,
@@ -34,7 +31,6 @@ export const seedIntents: Intent[] = [
   { id: "it-14", fromId: "u-haiou", toId: "u-make", projectId: "pj-xiaoman", kind: "partner", sub: "服务", message: "我们有北美冷链头程和洛杉矶冷冻仓。", anonymous: false, revealed: true, status: "pending", createdAt: ago(1) },
   { id: "it-15", fromId: "u-linxi", toId: "u-chensiqi", projectId: "pj-herblab", kind: "partner", sub: "流量", message: "我们签约了 15 位中东美妆达人。", anonymous: false, revealed: true, status: "accepted", createdAt: ago(3), respondedAt: ago(2), conversationId: "cv-5" },
   { id: "it-17", fromId: "u-limu", toId: "u-zhouqihang", projectId: "pj-photogrid", kind: "invest", sub: "A 轮", message: "关注欧洲阳台储能很久了，想深入聊聊荷兰的渠道和 A 轮计划。", anonymous: false, revealed: true, status: "accepted", createdAt: ago(45), respondedAt: ago(44), conversationId: "cv-6" },
-  { id: "it-16", fromId: "u-wunan", toId: "u-wanglan", needId: "n-p-wl-1", kind: "help", message: "云帆有一个门店动销看板模块，可以免费试用一个月。", anonymous: false, revealed: true, status: "pending", createdAt: ago(0, 8) },
 ];
 
 export const seedConversations: Conversation[] = [
@@ -192,37 +188,6 @@ export const seedFollows: Follow[] = [
   { userId: "u-wanglan", targetType: "project", targetId: "pj-minimo", at: ago(3) },
   { userId: "u-chenyi", targetType: "person", targetId: "u-hesiyuan", at: ago(12) },
   { userId: "u-linchuan", targetType: "person", targetId: "u-gaoyuan", at: ago(15) },
-];
-
-export const seedEndorsements: Endorsement[] = [
-  { id: "en-1", fromId: "u-zhoumin", targetType: "person", targetId: "u-linchuan", dimension: "出海渠道", text: "见过最懂东南亚商场招商的茶饮创始人，开店选址几乎没有失手。", at: ago(30) },
-  { id: "en-2", fromId: "u-gaoyuan", targetType: "person", targetId: "u-linchuan", dimension: "供应链", text: "自建茶园直采，这在早期团队里很少见。", at: ago(10) },
-  { id: "en-3", fromId: "u-wanglan", targetType: "person", targetId: "u-linchuan", dimension: "出海渠道", text: "合作过程很爽快，执行力强。", at: ago(3) },
-  { id: "en-4", fromId: "u-xunuo", targetType: "person", targetId: "u-linchuan", dimension: "组织管理", text: "带团队很有一套，新加坡门店的店长都是他亲手带出来的。", at: ago(60) },
-  { id: "en-5", fromId: "u-limu", targetType: "person", targetId: "u-linchuan", dimension: "出海渠道", text: "对东南亚消费者的理解很深。", at: ago(50) },
-  { id: "en-6", fromId: "u-zhoumin", targetType: "project", targetId: "pj-shiguang", dimension: "商业模式", text: "单店模型扎实，3 个月回本在新加坡非常少见。", at: ago(20) },
-  { id: "en-7", fromId: "u-gaoyuan", targetType: "project", targetId: "pj-shiguang", dimension: "出海潜力", text: "东方茶饮在东南亚的空间还很大。", at: ago(12) },
-  { id: "en-8", fromId: "u-linchuan", targetType: "person", targetId: "u-wanglan", dimension: "出海渠道", text: "东南亚 KA 渠道找她就对了，靠谱、专业、响应快。", at: ago(2) },
-  { id: "en-9", fromId: "u-xunuo", targetType: "person", targetId: "u-wanglan", dimension: "出海渠道", text: "帮我们打通了泰国 Central 的户外专区。", at: ago(40) },
-  { id: "en-10", fromId: "u-zhoumin", targetType: "person", targetId: "u-wanglan", dimension: "行业洞察", text: "对东南亚零售的判断很准。", at: ago(70) },
-  { id: "en-11", fromId: "u-hesiyuan", targetType: "person", targetId: "u-chenyi", dimension: "品牌营销", text: "增长打法很系统，数据敏感度极高。", at: ago(25) },
-  { id: "en-12", fromId: "u-zhaoyiming", targetType: "person", targetId: "u-chenyi", dimension: "出海渠道", text: "东南亚增长的实战派。", at: ago(5) },
-  { id: "en-13", fromId: "u-linchuan", targetType: "person", targetId: "u-zhoumin", dimension: "行业洞察", text: "最懂消费出海的投资人之一，问的问题都在点子上。", at: ago(25) },
-  { id: "en-14", fromId: "u-xunuo", targetType: "person", targetId: "u-zhoumin", dimension: "融资", text: "投后帮了我们很多，介绍的渠道都很靠谱。", at: ago(80) },
-  { id: "en-15", fromId: "u-gaoyuan", targetType: "person", targetId: "u-zhoumin", dimension: "行业洞察", text: "判断力一流。", at: ago(90) },
-  { id: "en-16", fromId: "u-limu", targetType: "project", targetId: "pj-leapai", dimension: "产品力", text: "商品一致性做得是我见过最好的。", at: ago(30) },
-  { id: "en-17", fromId: "u-zhoumin", targetType: "project", targetId: "pj-wildpath", dimension: "增长", text: "31% 的复购率在户外品类很亮眼。", at: ago(6) },
-  { id: "en-18", fromId: "u-suqing", targetType: "project", targetId: "pj-photogrid", dimension: "产品力", text: "产品工程化程度高。", at: ago(35) },
-  { id: "en-19", fromId: "u-limu", targetType: "person", targetId: "u-hesiyuan", dimension: "技术", text: "AI 工程能力扎实。", at: ago(30) },
-  { id: "en-20", fromId: "u-chenyi", targetType: "person", targetId: "u-gaoyuan", dimension: "出海渠道", text: "亚马逊冷启动的打法讲得最清楚的人。", at: ago(28) },
-];
-
-export const seedFeedback: Feedback[] = [
-  { id: "fb-1", projectId: "pj-shiguang", fromId: "u-gaoyuan", category: "市场", text: "吉隆坡的写字楼午餐时段很集中，建议首店选在 KLCC 附近并做外卖小程序。", isPublic: true, helpful: true, reply: "非常有用，我们正在评估 KLCC 的两个铺位。", at: ago(9) },
-  { id: "fb-2", projectId: "pj-shiguang", fromId: "u-chenyi", category: "产品", text: "瓶装茶的包装可以更「东方」一点，现在的设计和本地品牌区分度不够。", isPublic: false, helpful: false, at: ago(2) },
-  { id: "fb-3", projectId: "pj-shiguang", fromId: "u-limu", category: "团队", text: "建议尽早补一位本地财务，东南亚各国税务差异很大。", isPublic: false, helpful: false, at: ago(1) },
-  { id: "fb-4", projectId: "pj-leapai", fromId: "u-linchuan", category: "产品", text: "希望支持泰语和马来语的 listing。", isPublic: true, helpful: true, at: ago(12) },
-  { id: "fb-5", projectId: "pj-furplanet", fromId: "u-chenyi", category: "市场", text: "多猫家庭在东南亚的公寓里很常见，可以先找 Shopee 宠物类目头部店铺合作。", isPublic: true, helpful: true, reply: "好建议，已经在和两家店铺谈。", at: ago(24) },
 ];
 
 export const seedWatch: WatchItem[] = [
@@ -387,69 +352,6 @@ export const seedNews: NewsItem[] = [
   { id: "nw-6", title: "日本乐天公布 2026 双十一家居品类榜单", source: "日经", summary: "收纳品类中国品牌占据前十中的六席。", tag: "日韩", at: ago(5), projectId: "pj-minimo" },
 ];
 
-export const seedLists: CuratedList[] = [
-  {
-    id: "ls-1",
-    title: "十月值得关注的消费出海项目",
-    desc: "Pitch 投资团队每月精选，看重真实数据与团队的海外经验。",
-    curatorId: "u-ake",
-    kind: "project",
-    items: [
-      { targetId: "pj-shiguang", note: "新加坡首店 3 个月回本，单店模型扎实" },
-      { targetId: "pj-wildpath", note: "31% 复购，欧洲线下渠道值得期待" },
-      { targetId: "pj-minimo", note: "日本线上第一，正在进线下" },
-      { targetId: "pj-photogrid", note: "欧洲阳台储能的先行者" },
-    ],
-    followers: ["u-zhoumin", "u-gaoyuan", "u-wanglan"],
-    featured: true,
-    updatedAt: ago(4),
-  },
-  {
-    id: "ls-2",
-    title: "东南亚渠道，找这几位就对了",
-    desc: "社区里被背书最多的东南亚渠道与市场专家。",
-    curatorId: "u-ake",
-    kind: "person",
-    items: [
-      { targetId: "u-wanglan", note: "KA 渠道 9 年，2,000+ 门店" },
-      { targetId: "u-songyan", note: "前 Lazada 招商，泰语流利" },
-      { targetId: "u-chenyi", note: "前 SHEIN 东南亚增长" },
-    ],
-    followers: ["u-linchuan", "u-sunyue"],
-    featured: true,
-    updatedAt: ago(6),
-  },
-  {
-    id: "ls-3",
-    title: "我在看的消费品牌出海",
-    desc: "持光资本周敏的个人观察清单（公开部分）。",
-    curatorId: "u-zhoumin",
-    kind: "project",
-    items: [
-      { targetId: "pj-shiguang", note: "门店 + 瓶装双线，关注渠道验证" },
-      { targetId: "pj-minimo", note: "日本线上做到第一，看线下能不能复制" },
-    ],
-    followers: ["u-linchuan", "u-make"],
-    featured: false,
-    updatedAt: ago(10),
-  },
-  {
-    id: "ls-4",
-    title: "AI × 跨境工具榜",
-    desc: "远山创投李牧整理，帮出海企业省人省钱的工具。",
-    curatorId: "u-limu",
-    kind: "project",
-    items: [
-      { targetId: "pj-leapai", note: "商品图一致性最好" },
-      { targetId: "pj-sailops", note: "独立站运营自动化" },
-      { targetId: "pj-lingxi", note: "跨语言沟通的硬件解法" },
-    ],
-    followers: ["u-hesiyuan", "u-wunan"],
-    featured: false,
-    updatedAt: ago(15),
-  },
-];
-
 export const seedDemoDays: DemoDay[] = [
   {
     id: "dd-2026-11",
@@ -523,45 +425,34 @@ export const seedDemoDays: DemoDay[] = [
 
 export const seedNotifications: Notification[] = [
   { id: "nt-1", userId: "u-linchuan", type: "intent", title: "周敏 想投资拾光茶事", body: "持光资本合伙人 · 「看了新加坡首店的数据，坪效很亮眼……」", link: "/dashboard/shiguang-tea?tab=intents", at: ago(0, 5), read: false },
-  { id: "nt-2", userId: "u-linchuan", type: "intent", title: "一位匿名投资人对拾光茶事感兴趣", body: "关注 AI 应用 · 企业服务，被 1 位投资人背书", link: "/dashboard/shiguang-tea?tab=intents", at: ago(1, 3), read: false },
+  { id: "nt-2", userId: "u-linchuan", type: "intent", title: "一位匿名投资人对拾光茶事感兴趣", body: "关注 AI 应用 · 企业服务", link: "/dashboard/shiguang-tea?tab=intents", at: ago(1, 3), read: false },
   { id: "nt-3", userId: "u-linchuan", type: "conversation", title: "王岚 回复了你", body: "看完了！柠檬乌龙和白桃乌龙最合适……", link: "/inbox/cv-1", at: ago(0, 2), read: false },
-  { id: "nt-4", userId: "u-linchuan", type: "endorsement", title: "王岚 为你写了一条背书", body: "出海渠道 · 「合作过程很爽快，执行力强。」", link: "/@linchuan", at: ago(3), read: true },
-  { id: "nt-5", userId: "u-linchuan", type: "feedback", title: "拾光茶事收到 2 条新建议", body: "产品 · 团队", link: "/dashboard/shiguang-tea?tab=feedback", at: ago(1), read: false },
   { id: "nt-6", userId: "u-linchuan", type: "demoday", title: "拾光茶事入围十一月月度路演", body: "投票已开放，分享给朋友为你投票吧", link: "/demo-day", at: ago(6), read: true },
   { id: "nt-7", userId: "u-linchuan", type: "officehours", title: "你的答疑预约等待高远确认", body: "10 月 25 日 20:00 · 亚马逊冷启动", link: "/office-hours?tab=booked", at: ago(1), read: true },
-  { id: "nt-14", userId: "u-linchuan", type: "reward", title: "贡献任务完成，意向次数 +1", body: "为王岚写了一条背书", link: "/rewards", at: ago(2), read: true },
+  { id: "nt-14", userId: "u-linchuan", type: "reward", title: "贡献任务完成，意向次数 +1", body: "拾光茶事发布了一条动态", link: "/rewards", at: ago(2), read: true },
   { id: "nt-15", userId: "u-linchuan", type: "system", title: "拾光茶事已通过上墙审核", body: "项目已出现在发现页，审核用时 6 小时", link: "/dashboard/shiguang-tea?tab=exposure", at: ago(9), read: true },
   { id: "nt-16", userId: "u-linchuan", type: "update", title: "跃迁智能发布了新动态", body: "你关注的项目 · 我们上线了：TikTok Shop 一键上架", link: "/p/leap-ai", at: ago(4), read: true },
   { id: "nt-8", userId: "u-zhoumin", type: "update", title: "观察清单里的拾光茶事有新动态", body: "里程碑：新加坡首店月流水突破 80 万", link: "/watchlist#w-pj-shiguang", at: ago(8), read: false },
   { id: "nt-17", userId: "u-zhoumin", type: "intent", title: "野径 Wildpath 接受了你的意向", body: "已创建对话，许诺说：「周四下午有空吗？」", link: "/inbox/cv-3", at: ago(5), read: true },
   { id: "nt-18", userId: "u-zhoumin", type: "demoday", title: "十一月月度路演投票已开放", body: "首批 3 个项目入围，10/23 前按随机顺序展示", link: "/demo-day", at: ago(3), read: true },
-  { id: "nt-19", userId: "u-zhoumin", type: "endorsement", title: "林川 为你写了一条背书", body: "行业洞察 · 「最懂消费出海的投资人之一，问的问题都在点子上。」", link: "/@zhoumin", at: ago(25), read: true },
   { id: "nt-9", userId: "u-zhoumin", type: "conversation", title: "Pitch 运营阿珂已接手撮合", body: "野径 · 已约 10 月 24 日厦门线下会面", link: "/inbox/cv-3", at: ago(2), read: false },
   { id: "nt-20", userId: "u-zhoumin", type: "officehours", title: "赵一鸣 预约了你的答疑时段", body: "消费品牌出海的融资准备 · 毛球星球在融天使轮，想请教消费硬件的估值逻辑……", link: "/office-hours?tab=hosting", at: ago(0, 6), read: false },
   { id: "nt-10", userId: "u-zhoumin", type: "officehours", title: "许诺预约了你的答疑时段", body: "10 月 22 日 16:00 · 已确认", link: "/office-hours?tab=hosting", at: ago(2), read: true },
   { id: "nt-11", userId: "u-chenyi", type: "member", title: "林川邀请你成为拾光茶事的成员", body: "职位：增长顾问。确认后项目会出现在你的主页上", link: "/me/intents?tab=invites", at: ago(1), read: false },
-  { id: "nt-12", userId: "u-wanglan", type: "intent", title: "吴楠说可以帮你解决「多门店动销看板」", body: "「云帆有一个门店动销看板模块……」", link: "/me/intents?tab=received", at: ago(0, 8), read: false },
   { id: "nt-13", userId: "u-ake", type: "system", title: "有 2 个项目等待上墙审核", body: "本草实验室、小满厨房", link: "/ops?tab=review", at: ago(1), read: false },
 ];
 
 export const seedNotifyPrefs: NotifyPrefs[] = [
-  { userId: "u-linchuan", wechatBound: true, wechatOn: true, email: "linchuan@shiguangtea.com", emailOn: true, frequency: "weekly", instant: ["intent", "conversation", "member", "officehours", "feedback"] },
+  { userId: "u-linchuan", wechatBound: true, wechatOn: true, email: "linchuan@shiguangtea.com", emailOn: true, frequency: "weekly", instant: ["intent", "conversation", "member", "officehours"] },
   { userId: "u-zhoumin", wechatBound: true, wechatOn: true, email: "zhoumin@chiguang.vc", emailOn: true, frequency: "weekly", instant: ["intent", "conversation", "officehours", "update"] },
   { userId: "u-chenyi", wechatBound: true, wechatOn: true, emailOn: false, frequency: "important", instant: ["intent", "conversation", "member"] },
 ];
 
 export const seedContributions: Contribution[] = [
-  { id: "ct-1", userId: "u-linchuan", action: "feedback", at: ago(12), label: "给跃迁智能写了一条建议" },
   { id: "ct-2", userId: "u-linchuan", action: "update", at: ago(8), label: "拾光茶事发布了一条动态" },
-  { id: "ct-3", userId: "u-linchuan", action: "endorse", at: ago(2), label: "为王岚写了一条背书" },
   { id: "ct-4", userId: "u-zhoumin", action: "vote", at: ago(4), label: "在十一月路演为拾光茶事投票" },
   { id: "ct-5", userId: "u-zhoumin", action: "status_refresh", at: ago(5), label: "刷新了开放状态" },
-  { id: "ct-6", userId: "u-zhoumin", action: "endorse", at: ago(6), label: "为野径 Wildpath 写了一条背书" },
-  { id: "ct-7", userId: "u-chenyi", action: "feedback", at: ago(2), label: "给拾光茶事写了一条建议" },
-  { id: "ct-8", userId: "u-linchuan", action: "endorse", at: ago(25), label: "为周敏写了一条背书" },
   { id: "ct-9", userId: "u-linchuan", action: "status_refresh", at: ago(33), label: "刷新了开放状态" },
-  { id: "ct-10", userId: "u-chenyi", action: "feedback", at: ago(24), label: "给毛球星球写了一条建议" },
-  { id: "ct-11", userId: "u-chenyi", action: "endorse", at: ago(28), label: "为高远写了一条背书" },
   { id: "ct-12", userId: "u-chenyi", action: "status_refresh", at: ago(40), label: "刷新了开放状态" },
   { id: "ct-13", userId: "u-chenyi", action: "vote", at: ago(36), label: "在九月路演为青禾中文投票" },
 ];
@@ -579,6 +470,9 @@ export const seedOfficeHours: OfficeHourSlot[] = [
 ];
 
 export const FOLLOWER_BASE: Record<string, number> = {
+  "pj-yikaixin": 96,
+  "pj-tanbei": 41,
+  "u-xufeng": 28,
   "pj-shiguang": 126,
   "pj-leapai": 214,
   "pj-wildpath": 88,

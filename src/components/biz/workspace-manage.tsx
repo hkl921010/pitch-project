@@ -1,14 +1,13 @@
 "use client";
 
-import { Copy, Eye, EyeOff, Lightbulb, Megaphone, MessageSquareReply, Search, ThumbsUp, Trash2, UserPlus, Users } from "lucide-react";
+import { Copy, Eye, Megaphone, Search, Trash2, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, Badge, Card, EmptyState } from "@/components/ui/display";
-import { Input, RadioCards, Select, Textarea, Toggle } from "@/components/ui/form";
+import { Input, RadioCards, Select, Textarea } from "@/components/ui/form";
 import { ConfirmModal, Modal } from "@/components/ui/overlay";
-import { Segmented } from "@/components/ui/tabs";
 import { UPDATE_TEMPLATES } from "@/data/constants";
 import { relativeTime } from "@/data/time";
 import type { Project, TeamMember, TeamRole, UpdateTemplate } from "@/data/types";
@@ -405,143 +404,6 @@ export function UpdatesPanel({ project }: { project: Project }) {
           toast({ tone: "info", title: "已删除" });
         }}
       />
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ 建议 */
-
-export function FeedbackPanel({ project }: { project: Project }) {
-  const db = useDB();
-  const patch = useApp((s) => s.patchFeedback);
-  const toast = useApp((s) => s.toast);
-  const [filter, setFilter] = useState<"todo" | "all" | "public">("todo");
-  const [replying, setReplying] = useState<string | null>(null);
-  const [reply, setReply] = useState("");
-  const all = db.feedback.filter((f) => f.projectId === project.id).sort((a, b) => b.at.localeCompare(a.at));
-  const todo = all.filter((f) => !f.reply && !f.helpful);
-  const pub = all.filter((f) => f.isPublic);
-  const list = filter === "todo" ? todo : filter === "public" ? pub : all;
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Segmented
-          size="sm"
-          value={filter}
-          onChange={setFilter}
-          items={[
-            { value: "todo", label: "待处理", count: todo.length },
-            { value: "all", label: "全部", count: all.length },
-            { value: "public", label: "已公开", count: pub.length },
-          ]}
-        />
-        <p className="text-xs text-gray-500">建议默认只有你能看到；公开后会显示在项目页“建议区”</p>
-      </div>
-
-      {list.length ? (
-        <ul className="flex flex-col gap-3">
-          {list.map((f) => {
-            const from = getPerson(db, f.fromId);
-            return (
-              <li key={f.id}>
-                <Card className="flex flex-col gap-3">
-                  <div className="flex items-start gap-3">
-                    <Avatar name={from?.name ?? "?"} tone={from?.avatarTone ?? 0} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 text-sm">
-                        <Link href={`/u/${from?.handle}`} className="font-semibold text-gray-900 hover:text-brand-700">
-                          {from?.name}
-                        </Link>
-                        <span className="text-gray-500">{roleText(from)}</span>
-                        <Badge size="xs">{f.category}</Badge>
-                        <span className="text-xs text-gray-400">{relativeTime(f.at)}</span>
-                      </div>
-                      <p className="mt-1 text-[15px] text-gray-800">{f.text}</p>
-                    </div>
-                  </div>
-
-                  {f.reply && replying !== f.id ? (
-                    <div className="ml-11 rounded-lg border-l-2 border-brand-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                      <span className="font-semibold text-gray-900">你的回复：</span>
-                      {f.reply}
-                    </div>
-                  ) : null}
-
-                  {replying === f.id ? (
-                    <div className="ml-11 flex flex-col gap-2">
-                      <Textarea rows={2} autoFocus maxCount={200} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="谢谢建议，我们打算……" />
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          disabled={!reply.trim()}
-                          onClick={() => {
-                            patch(f.id, { reply: reply.trim() });
-                            setReplying(null);
-                            toast({ tone: "success", title: "已回复", body: `${from?.name} 会收到通知` });
-                          }}
-                        >
-                          保存回复
-                        </Button>
-                        <Button size="sm" variant="tertiary" onClick={() => setReplying(null)}>
-                          取消
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="ml-11 flex flex-wrap items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant={f.helpful ? "brand" : "secondary"}
-                        iconLeft={ThumbsUp}
-                        onClick={() => {
-                          patch(f.id, { helpful: !f.helpful });
-                          if (!f.helpful) toast({ tone: "success", title: "已标记有用", body: `${from?.name} 会收到通知` });
-                        }}
-                      >
-                        {f.helpful ? "已标记有用" : "有用"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        iconLeft={MessageSquareReply}
-                        onClick={() => {
-                          setReplying(f.id);
-                          setReply(f.reply ?? "");
-                        }}
-                      >
-                        {f.reply ? "修改回复" : "回复"}
-                      </Button>
-                      <span className="ml-auto flex items-center gap-2 text-sm text-gray-600">
-                        {f.isPublic ? <Eye size={14} /> : <EyeOff size={14} />}
-                        <Toggle
-                          size="sm"
-                          checked={f.isPublic}
-                          onChange={(v) => {
-                            patch(f.id, { isPublic: v });
-                            toast({ tone: "info", title: v ? "已公开到项目页" : "已改为仅你可见" });
-                          }}
-                          label="公开"
-                        />
-                      </span>
-                    </div>
-                  )}
-                </Card>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <Card>
-          <EmptyState
-            compact
-            icon={Lightbulb}
-            title={filter === "todo" ? "建议都处理完了" : filter === "public" ? "还没有公开的建议" : "还没有收到建议"}
-            desc={filter === "all" ? "访客可以在项目页“建议区”给你提建议，写建议的人会获得意向次数奖励" : undefined}
-          />
-        </Card>
-      )}
     </div>
   );
 }

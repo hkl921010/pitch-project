@@ -129,8 +129,8 @@ export function ConversationList({ activeId }: { activeId?: string }) {
                 title="还没有对话"
                 desc="你发出的意向被接受、或你接受了别人的意向后，对话会出现在这里"
                 action={
-                  <Button size="sm" variant="primary" href="/discover?tab=needs">
-                    去看看谁在找人
+                  <Button size="sm" variant="primary" href="/discover">
+                    去发现页看看
                   </Button>
                 }
               />

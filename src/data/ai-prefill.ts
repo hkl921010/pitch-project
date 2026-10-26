@@ -14,7 +14,7 @@ export interface BPExtract {
   product: string;
   edge: string;
   website: string;
-  lookingFor: Pick<NeedItem, "kind" | "sub" | "title" | "detail">[];
+  lookingFor: Pick<NeedItem, "kind" | "coop" | "sub" | "title" | "detail" | "terms">[];
 }
 
 export const BP_SAMPLE: BPExtract = {
@@ -29,8 +29,21 @@ export const BP_SAMPLE: BPExtract = {
   edge: "创始团队来自 Grab 和皇家宠物食品，自建中央厨房，单份成本比进口鲜粮低 35%；与 40 家宠物医院建立了推荐合作。",
   website: "freshpaw.sg",
   lookingFor: [
-    { kind: "invest", sub: "天使轮", title: "天使轮融资，用于吉隆坡中央厨房", detail: "希望投资方有消费品牌或宠物行业经验" },
-    { kind: "partner", sub: "渠道", title: "宠物医院与宠物店渠道", detail: "按推荐分成或联名套餐" },
+    {
+      kind: "invest",
+      coop: "funding",
+      sub: "天使轮",
+      title: "天使轮融资，用于吉隆坡中央厨房",
+      detail: "希望投资方有消费品牌或宠物行业经验",
+      terms: "计划融资 600 万人民币，投前估值 3000 万。这笔钱对应吉隆坡中央厨房和首批 3 个月冷链配送。",
+    },
+    {
+      kind: "partner",
+      coop: "channel",
+      title: "宠物医院与宠物店渠道",
+      detail: "新加坡、吉隆坡的宠物医院和宠物店，能把鲜粮推荐给到店家庭。",
+      terms: "按推荐成交给 12% 分成，或做联名套餐。鲜宠负责生产和配送，渠道方负责推荐和到店展示。",
+    },
   ],
 };
 

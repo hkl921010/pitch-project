@@ -11,8 +11,6 @@ import {
   Download,
   Hourglass,
   Inbox,
-  Lightbulb,
-  ListOrdered,
   Megaphone,
   PencilLine,
   Share2,
@@ -37,7 +35,7 @@ import { cn } from "@/lib/cn";
 import { useApp } from "@/store/app-store";
 import { currentDemoDay, followerCount, getPerson, projectCompletion, useDB } from "@/store/selectors";
 
-export type WorkspaceTab = "overview" | "intents" | "team" | "updates" | "feedback" | "exposure" | "share";
+export type WorkspaceTab = "overview" | "intents" | "team" | "updates" | "exposure" | "share";
 
 const sum = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
 
@@ -61,7 +59,6 @@ export function OverviewPanel({ project, manage, onTab }: { project: Project; ma
   const convs = db.conversations.filter((c) => c.projectId === project.id);
   const matches = convs.filter((c) => c.match);
   const watchers = db.watch.filter((w) => w.projectId === project.id).length;
-  const feedbackTodo = db.feedback.filter((f) => f.projectId === project.id && !f.reply && !f.helpful).length;
   const invited = project.team.filter((t) => t.status === "invited").length;
   const completion = projectCompletion(project);
   const lastUpdate = project.updates[0];
@@ -75,7 +72,6 @@ export function OverviewPanel({ project, manage, onTab }: { project: Project; ma
   const todos: { key: string; icon: LucideIcon; title: string; desc: string; go: () => void; href?: string }[] = [];
   if (manage && pending.length)
     todos.push({ key: "intents", icon: Inbox, title: `回应 ${pending.length} 条意向`, desc: "回复速度会显示在项目页上，影响对方的判断", go: () => onTab("intents") });
-  if (feedbackTodo) todos.push({ key: "feedback", icon: Lightbulb, title: `处理 ${feedbackTodo} 条建议`, desc: "标记有用或回复，对方会收到通知", go: () => onTab("feedback") });
   if (completion.remaining)
     todos.push({ key: "edit", icon: PencilLine, title: `补全资料（还差 ${completion.remaining} 项）`, desc: `完成度 ${completion.percent}%，${EXPOSURE_MIN_COMPLETION}% 以上可申请上发现页`, go: () => {}, href: `/p/${project.slug}/edit` });
   if (manage && invited) todos.push({ key: "team", icon: UserPlus, title: `${invited} 位成员还没确认`, desc: "确认后项目才会出现在 TA 的主页上", go: () => onTab("team") });
@@ -249,7 +245,7 @@ function Funnel({ steps }: { steps: { label: string; value: number }[] }) {
   );
 }
 
-/* ------------------------------------------------------------------ 曝光：上墙、路演、榜单、徽章 */
+/* ------------------------------------------------------------------ 曝光：上墙、路演、徽章 */
 
 export function ExposurePanel({ project, onTab }: { project: Project; onTab: (t: WorkspaceTab) => void }) {
   const db = useDB();
@@ -264,7 +260,6 @@ export function ExposurePanel({ project, onTab }: { project: Project; onTab: (t:
   const [note, setNote] = useState("");
   const [tried, setTried] = useState(false);
   const noteError = tried && note.trim().length < 10 ? "至少 10 个字，让评审知道你想讲什么" : undefined;
-  const lists = db.lists.filter((l) => l.items.some((it) => it.targetId === project.id));
   const past = db.demoDays.filter((d) => d.status === "ended" && d.entries.some((e) => e.projectId === project.id));
 
   const votes = dd && entry ? dd.votes[project.id]?.length ?? 0 : 0;
@@ -293,7 +288,7 @@ export function ExposurePanel({ project, onTab }: { project: Project; onTab: (t:
           <FeaturedIcon icon={Compass} tone="brand" />
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-semibold text-gray-900">上发现页</h3>
-            <p className="text-sm text-gray-500">审核只决定是否出现在发现页、榜单和推荐里；公开页一直可以访问。</p>
+            <p className="text-sm text-gray-500">审核只决定是否出现在发现页和推荐里；公开页一直可以访问。</p>
           </div>
           <WallBadge wall={project.wall} />
         </div>
@@ -431,37 +426,6 @@ export function ExposurePanel({ project, onTab }: { project: Project; onTab: (t:
             参加过：{past.map((d) => d.title).join("、")}
           </div>
         ) : null}
-      </Card>
-
-      <Card className="flex flex-col gap-4">
-        <div className="flex items-start gap-3">
-          <FeaturedIcon icon={ListOrdered} tone="blue" />
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-gray-900">被收录的榜单</h3>
-            <p className="text-sm text-gray-500">由运营和投资人策展，收录理由会显示在榜单上</p>
-          </div>
-        </div>
-        {lists.length ? (
-          <ul className="flex flex-col divide-y divide-gray-100">
-            {lists.map((l) => {
-              const curator = getPerson(db, l.curatorId);
-              const it = l.items.find((x) => x.targetId === project.id)!;
-              return (
-                <li key={l.id} className="py-3 first:pt-0 last:pb-0">
-                  <Link href={`/lists/${l.id}`} className="text-sm font-semibold text-gray-900 hover:text-brand-700">
-                    {l.title}
-                  </Link>
-                  <p className="text-xs text-gray-500">
-                    {curator?.name} 策展 · {l.followers.length} 人关注
-                  </p>
-                  {it.note ? <p className="mt-1 text-sm text-gray-600">“{it.note}”</p> : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <EmptyState compact icon={ListOrdered} title="还没有被收录" desc="上发现页后，策展人更容易看到你" />
-        )}
       </Card>
 
       <Card className="flex flex-col gap-4">

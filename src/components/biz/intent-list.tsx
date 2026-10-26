@@ -1,6 +1,6 @@
 "use client";
 
-import { EyeOff, Inbox, MessageCircle, Send, ShieldCheck, Undo2 } from "lucide-react";
+import { EyeOff, Inbox, MessageCircle, Send, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,13 +13,13 @@ import { relativeTime } from "@/data/time";
 import type { Intent } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useApp } from "@/store/app-store";
-import { anonymousProfile, getPerson, getProject, intentKindLabel, investorEndorsers, requesterStatusLabel, requesterView, roleText, useDB } from "@/store/selectors";
+import { anonymousProfile, getPerson, getProject, intentKindLabel, requesterStatusLabel, requesterView, roleText, useDB } from "@/store/selectors";
 
 function KindLine({ intent: i }: { intent: Intent }) {
   const db = useDB();
   const project = getProject(db, i.projectId);
   const job = project?.jobs.find((j) => j.id === i.jobId);
-  const need = i.needId ? (project?.lookingFor ?? getPerson(db, i.toId)?.lookingFor ?? []).find((n) => n.id === i.needId) : undefined;
+  const need = i.needId ? project?.lookingFor.find((n) => n.id === i.needId) : undefined;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Badge tone={i.kind === "invest" ? "success" : i.kind === "join" ? "brand" : i.kind === "partner" ? "blue" : "warning"} size="xs">
@@ -73,11 +73,6 @@ export function ReceivedIntentCard({ intent: i, showProject = true }: { intent: 
               <p className="text-sm text-gray-500">
                 {roleText(from)}
                 {from.org ? ` · ${from.org}` : ""}
-                {investorEndorsers(db, from.id) ? (
-                  <span className="ml-2 inline-flex items-center gap-0.5 text-brand-700">
-                    <ShieldCheck size={12} />被 {investorEndorsers(db, from.id)} 位投资人背书
-                  </span>
-                ) : null}
               </p>
             </>
           ) : null}
@@ -245,7 +240,7 @@ export function SentIntentList({ intents }: { intents: Intent[] }) {
     </div>
   ) : (
     <div className="rounded-xl border border-dashed border-gray-300 bg-white">
-      <EmptyState compact icon={Send} title="还没有发出过意向" desc="在发现页的“需求”里找找能合作的项目" action={<Button size="sm" variant="primary" href="/discover?tab=needs">去看需求</Button>} />
+      <EmptyState compact icon={Send} title="还没有发出过意向" desc="去发现页找一个项目，看清对方怎么合作" action={<Button size="sm" variant="primary" href="/discover">去发现页</Button>} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, Check, Gift, Lightbulb, type LucideIcon, Megaphone, PenLine, RefreshCw, Send, ThumbsUp, Vote } from "lucide-react";
+import { Award, Check, Gift, type LucideIcon, Megaphone, PenLine, RefreshCw, Send, Vote } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -14,11 +14,9 @@ import type { Contribution, ContributionAction, DB, Person } from "@/data/types"
 import { cn } from "@/lib/cn";
 import { useHashScroll } from "@/lib/use-hash-scroll";
 import { useApp } from "@/store/app-store";
-import { bestContributionMonth, currentDemoDay, endorsementsFor, followerCount, manageableProjects, personBadges, useDB, useQuota, useViewer } from "@/store/selectors";
+import { bestContributionMonth, currentDemoDay, followerCount, manageableProjects, personBadges, useDB, useQuota, useViewer } from "@/store/selectors";
 
 const TASK_ICON: Record<ContributionAction, LucideIcon> = {
-  feedback: Lightbulb,
-  endorse: ThumbsUp,
   vote: Vote,
   update: Megaphone,
   status_refresh: RefreshCw,
@@ -38,7 +36,7 @@ function RewardsView() {
   if (!viewer) {
     return (
       <Page narrow>
-        <PageHeader title="任务中心" desc="写建议、写背书、为路演投票，每类每月第一次完成，意向次数 +1。" />
+        <PageHeader title="任务中心" desc="为路演投票、发布动态、刷新开放状态，每类每月第一次完成，意向次数 +1。" />
         <Card padded={false} className="mt-6">
           <EmptyState
             icon={Gift}
@@ -77,7 +75,7 @@ function RewardsBody({ viewer }: { viewer: Person }) {
 
   return (
     <Page>
-      <PageHeader title="任务中心" desc="写建议、写背书、为路演投票……每类每月第一次完成，本月意向次数 +1。" />
+      <PageHeader title="任务中心" desc="为路演投票、发布动态、刷新开放状态，每类每月第一次完成，本月意向次数 +1。" />
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -217,36 +215,12 @@ interface TaskRow {
 
 function taskList(db: DB, viewer: Person): TaskRow[] {
   const myProjects = manageableProjects(db, viewer.id);
-  const memberOf = new Set(db.projects.filter((p) => p.team.some((m) => m.personId === viewer.id)).map((p) => p.id));
   const dd = currentDemoDay(db);
   const voting = dd ? demoState(db, dd).votingOpen : false;
 
   return CONTRIBUTION_TASKS.map((t): TaskRow => {
     const base = { action: t.action, label: t.label, desc: t.desc };
     switch (t.action) {
-      case "feedback": {
-        const given = new Set(db.feedback.filter((f) => f.fromId === viewer.id).map((f) => f.projectId));
-        const target = db.projects
-          .filter((p) => p.visibility === "public" && p.wall === "approved" && !memberOf.has(p.id) && !given.has(p.id))
-          .sort((a, b) => db.feedback.filter((f) => f.projectId === a.id).length - db.feedback.filter((f) => f.projectId === b.id).length)[0];
-        return {
-          ...base,
-          hint: target ? `比如${target.name}，还没收到多少建议。` : undefined,
-          cta: { label: "去写建议", href: target ? `/p/${target.slug}#feedback` : "/discover" },
-        };
-      }
-      case "endorse": {
-        const endorsed = new Set(db.endorsements.filter((e) => e.fromId === viewer.id).map((e) => e.targetId));
-        const followed = db.follows
-          .filter((f) => f.userId === viewer.id && f.targetType === "person" && !endorsed.has(f.targetId))
-          .map((f) => db.people.find((p) => p.id === f.targetId))
-          .find((p) => p && !p.isOps);
-        return {
-          ...base,
-          hint: followed ? `比如你关注的${followed.name}。` : undefined,
-          cta: { label: "去写背书", href: followed ? `/u/${followed.handle}#endorse` : "/discover?tab=people" },
-        };
-      }
       case "vote":
         return voting && dd ? { ...base, hint: `${dd.title}正在投票。`, cta: { label: "去投票", href: "/demo-day" } } : { ...base, hint: "本月路演投票还没开放，开放时会通知你。" };
       case "update":
@@ -263,11 +237,9 @@ function taskList(db: DB, viewer: Person): TaskRow[] {
 function BadgesCard({ db, viewer }: { db: DB; viewer: Person }) {
   const has = new Set(personBadges(db, viewer));
   const best = bestContributionMonth(db, viewer.id);
-  const endorsed = endorsementsFor(db, "person", viewer.id).length;
   const followers = followerCount(db, "person", viewer.id);
   const personal = [
     { id: "top_contributor", progress: has.has("top_contributor") ? `${monthLabel(best.month!)}完成 ${best.count} 项` : `本月 ${new Set(db.contributions.filter((c) => c.userId === viewer.id && isSameMonth(c.at, CURRENT_MONTH)).map((c) => c.action)).size}/${TOP_CONTRIBUTOR_TASKS} 项` },
-    { id: "endorsed_10", progress: `${Math.min(endorsed, 10)}/10 条背书` },
     { id: "followers_100", progress: `${Math.min(followers, 100)}/100 位关注` },
     { id: "early_member", progress: has.has("early_member") ? "2026 年前加入" : "仅限 2026 年前加入的成员" },
   ];

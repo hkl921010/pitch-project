@@ -5,6 +5,12 @@ export type IntentKind = "invest" | "partner" | "join" | "help" | "other";
 
 export type PartnerSub = "渠道" | "流量" | "品牌" | "服务";
 
+/** 项目寻求合作的宽类：上游、下游、融资。 */
+export type CoopKind = "supply" | "channel" | "funding";
+
+/** 自己花钱买的服务：朋友、新媒体、招人，或其他。 */
+export type ServiceKind = "friend" | "media" | "hiring" | "other";
+
 export interface Contact {
   wechat?: string;
   phone?: string;
@@ -39,17 +45,28 @@ export interface OpenStatus {
   offers?: PartnerOffer[];
 }
 
-/** “正在寻找”：项目的合作需求，或个人主页上的需求（由心愿墙并入） */
+/** 项目正在寻找的合作或服务。 */
 export interface NeedItem {
   id: string;
   ownerType: "project" | "person";
   ownerId: string;
   kind: IntentKind;
   sub?: string;
+  /** 项目合作宽类。和个人服务需求互斥。 */
+  coop?: CoopKind;
+  /** 项目要花钱买的服务。 */
+  service?: ServiceKind;
   title: string;
   detail?: string;
+  /** 卡片收起时的一句合作条件。 */
+  summary?: string;
+  /** 合作方式：分成、报价、估值，以及这笔合作对应的结果。 */
+  terms?: string;
+  /** 点开后的案例、测算或补充说明。 */
+  story?: string;
+  /** 点开后附的方案图或实拍。 */
+  storyImages?: { src: string; caption: string }[];
   createdAt: string;
-  fromWish?: boolean;
 }
 
 export interface Person {
@@ -65,7 +82,6 @@ export interface Person {
   bio: string;
   doingNow?: { oneLiner: string; info: string; highlights: string };
   openStatus: OpenStatus;
-  lookingFor: NeedItem[];
   contact: Contact;
   isMember: boolean;
   onboarded: boolean;
@@ -109,6 +125,8 @@ export interface GalleryItem {
   id: string;
   caption: string;
   tone: number;
+  /** 项目介绍里的实拍或方案图。 */
+  image?: string;
 }
 
 export type TrafficSource = "wechat" | "moments" | "poster" | "discover" | "demoday" | "article" | "direct";
@@ -123,11 +141,17 @@ export interface Project {
   region: string;
   logoTone: number;
   logoText: string;
+  /** 页头品牌图，通常是 logo 主视觉。 */
+  coverImage?: string;
   coverTone: number;
   gallery: GalleryItem[];
+  /** 页头上的短亮点，不写成长文。 */
+  highlights?: string[];
   intro: string;
   product: string;
   edge: string;
+  /** 寻找合作、寻找服务下面的详细介绍。页头只放短的三段。 */
+  profile?: string;
   website?: string;
   lookingFor: NeedItem[];
   jobs: Job[];
@@ -212,30 +236,6 @@ export interface Follow {
   at: string;
 }
 
-export interface Endorsement {
-  id: string;
-  fromId: string;
-  targetType: "project" | "person";
-  targetId: string;
-  dimension: string;
-  text: string;
-  at: string;
-}
-
-export type FeedbackCategory = "产品" | "市场" | "团队" | "其他";
-
-export interface Feedback {
-  id: string;
-  projectId: string;
-  fromId: string;
-  category: FeedbackCategory;
-  text: string;
-  isPublic: boolean;
-  helpful: boolean;
-  reply?: string;
-  at: string;
-}
-
 /** all：每条动态都提醒；key：只提醒上线、融资、获奖、里程碑；off：不提醒，只在清单里标“有更新”。 */
 export type WatchRemind = "all" | "key" | "off";
 
@@ -294,18 +294,6 @@ export interface NewsItem {
   projectId?: string;
 }
 
-export interface CuratedList {
-  id: string;
-  title: string;
-  desc: string;
-  curatorId: string;
-  kind: "project" | "person";
-  items: { targetId: string; note: string }[];
-  followers: string[];
-  featured: boolean;
-  updatedAt: string;
-}
-
 export interface DemoDayEntry {
   projectId: string;
   status: "applied" | "shortlisted" | "rejected";
@@ -329,7 +317,7 @@ export interface DemoDay {
   recap?: { viewers: number; intents: number; matches: number; quote: string };
 }
 
-export type NotificationType = "intent" | "conversation" | "endorsement" | "feedback" | "update" | "demoday" | "member" | "officehours" | "system" | "reward" | "list";
+export type NotificationType = "intent" | "conversation" | "update" | "demoday" | "member" | "officehours" | "system" | "reward";
 
 export interface Notification {
   id: string;
@@ -360,7 +348,7 @@ export interface NotifyPrefs {
   lastTestAt?: string;
 }
 
-export type ContributionAction = "feedback" | "endorse" | "vote" | "update" | "status_refresh";
+export type ContributionAction = "vote" | "update" | "status_refresh";
 
 export interface Contribution {
   id: string;
@@ -398,13 +386,10 @@ export interface DB {
   intents: Intent[];
   conversations: Conversation[];
   follows: Follow[];
-  endorsements: Endorsement[];
-  feedback: Feedback[];
   watch: WatchItem[];
   events: PitchEvent[];
   articles: Article[];
   news: NewsItem[];
-  lists: CuratedList[];
   demoDays: DemoDay[];
   notifications: Notification[];
   notifyPrefs: NotifyPrefs[];

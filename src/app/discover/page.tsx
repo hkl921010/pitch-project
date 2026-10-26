@@ -1,27 +1,23 @@
 "use client";
 
-import { Clock, Compass, Hourglass, ListOrdered, Search, SearchX, Users } from "lucide-react";
-import Link from "next/link";
+import { Compass, Hourglass, Search, SearchX, Users } from "lucide-react";
 import { Suspense, useMemo, useState } from "react";
 
-import { ListCard } from "@/components/biz/list-card";
-import { NEED_ICON, NEED_TONE, needLabel } from "@/components/biz/looking-for";
 import { PersonCard } from "@/components/biz/person-card";
 import { ProjectCard, ProjectCardSkeleton } from "@/components/biz/project-card";
 import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
-import { Avatar, Badge, Card, EmptyState, ProjectLogo } from "@/components/ui/display";
+import { Card, EmptyState, ProjectLogo } from "@/components/ui/display";
 import { Input, Select, Toggle } from "@/components/ui/form";
 import { Segmented, Tabs } from "@/components/ui/tabs";
-import { ROLE_LABEL, TRACKS } from "@/data/constants";
-import { relativeTime } from "@/data/time";
-import type { IntentKind, Project, Role } from "@/data/types";
+import { COOP_LABEL, COOP_ORDER, ROLE_LABEL, TRACKS } from "@/data/constants";
+import type { CoopKind, Project, Role } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useFakeLoading, useQueryParam } from "@/lib/use-query";
 import { useApp } from "@/store/app-store";
-import { acquaintances, allNeeds, followerCount, knownFollowers, manageableProjects, requesterView, useDB } from "@/store/selectors";
+import { acquaintances, followerCount, knownFollowers, manageableProjects, useDB } from "@/store/selectors";
 
-type Tab = "projects" | "people" | "needs" | "lists";
+type Tab = "projects" | "people";
 
 export default function DiscoverPage() {
   return (
@@ -36,12 +32,11 @@ function Discover() {
   const [tab, setTab] = useQueryParam<Tab>("tab", "projects");
   const visibleProjects = db.projects.filter((p) => p.visibility === "public" && p.wall === "approved");
   const people = db.people.filter((p) => p.onboarded && !p.isOps);
-  const needs = allNeeds(db);
   return (
     <Page>
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-[28px]">发现</h1>
-        <p className="text-[15px] text-gray-500">按“正在寻找”找项目和人，熟人关注过的会排在前面。</p>
+        <p className="text-[15px] text-gray-500">找项目和人，熟人关注过的会排在前面。</p>
       </div>
       <Tabs
         className="mt-6"
@@ -50,25 +45,19 @@ function Discover() {
         items={[
           { value: "projects", label: "项目", count: visibleProjects.length },
           { value: "people", label: "人", count: people.length },
-          { value: "needs", label: "需求", count: needs.length },
-          { value: "lists", label: "榜单", count: db.lists.length },
         ]}
       />
       <div className="mt-6">
         {tab === "projects" ? <ProjectsTab projects={visibleProjects} /> : null}
         {tab === "people" ? <PeopleTab /> : null}
-        {tab === "needs" ? <NeedsTab /> : null}
-        {tab === "lists" ? <ListsTab /> : null}
       </div>
     </Page>
   );
 }
 
-const LOOKING_FILTERS: { value: "all" | IntentKind; label: string }[] = [
+const LOOKING_FILTERS: { value: "all" | CoopKind; label: string }[] = [
   { value: "all", label: "全部" },
-  { value: "invest", label: "在融资" },
-  { value: "partner", label: "找合作" },
-  { value: "join", label: "在招人" },
+  ...COOP_ORDER.map((value) => ({ value, label: COOP_LABEL[value] })),
 ];
 
 function ProjectsTab({ projects }: { projects: Project[] }) {
@@ -76,7 +65,7 @@ function ProjectsTab({ projects }: { projects: Project[] }) {
   const viewerId = useApp((s) => s.viewerId);
   const [q, setQ] = useState("");
   const [track, setTrack] = useQueryParam<string>("track", "all");
-  const [looking, setLooking] = useQueryParam<"all" | IntentKind>("looking", "all");
+  const [looking, setLooking] = useQueryParam<"all" | CoopKind>("looking", "all");
   const [region, setRegion] = useState("all");
   const [sort, setSort] = useState<"known" | "active" | "followers" | "new">("known");
   const loading = useFakeLoading(`${track}-${looking}-${region}-${sort}`);
@@ -88,7 +77,7 @@ function ProjectsTab({ projects }: { projects: Project[] }) {
   const lastActive = (p: Project) => p.updates[0]?.at ?? p.createdAt;
   const list = projects
     .filter((p) => track === "all" || p.track === track)
-    .filter((p) => looking === "all" || p.lookingFor.some((n) => n.kind === looking) || (looking === "join" && p.jobs.length > 0))
+    .filter((p) => looking === "all" || p.lookingFor.some((n) => n.coop === looking))
     .filter((p) => region === "all" || p.region.includes(region))
     .filter((p) => !q.trim() || `${p.name}${p.oneLiner}${p.tags.join("")}${p.track}`.toLowerCase().includes(q.trim().toLowerCase()))
     .sort((a, b) => {
@@ -259,148 +248,5 @@ function PeopleTab() {
         </Card>
       )}
     </div>
-  );
-}
-
-const NEED_FILTERS: { value: "all" | IntentKind; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "invest", label: "融资" },
-  { value: "partner", label: "合作" },
-  { value: "join", label: "招人" },
-  { value: "help", label: "求助" },
-];
-
-const NEED_ACTION: Record<IntentKind, string> = { invest: "我想投资", partner: "我能合作", join: "我想加入", help: "我能帮上忙", other: "聊聊" };
-
-function NeedsTab() {
-  const db = useDB();
-  const viewerId = useApp((s) => s.viewerId);
-  const openIntent = useApp((s) => s.openIntent);
-  const [kind, setKind] = useQueryParam<"all" | IntentKind>("kind", "all");
-  const [owner, setOwner] = useState<"all" | "project" | "person">("all");
-  const loading = useFakeLoading(`${kind}-${owner}`);
-  const list = allNeeds(db)
-    .filter((n) => kind === "all" || n.need.kind === kind)
-    .filter((n) => owner === "all" || n.need.ownerType === owner);
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Segmented size="sm" value={kind} onChange={setKind} items={NEED_FILTERS.map((f) => ({ ...f, count: f.value === "all" ? undefined : allNeeds(db).filter((n) => n.need.kind === f.value).length }))} />
-        <Segmented
-          size="sm"
-          className="sm:ml-auto"
-          value={owner}
-          onChange={setOwner}
-          items={[
-            { value: "all", label: "全部来源" },
-            { value: "project", label: "项目" },
-            { value: "person", label: "个人" },
-          ]}
-        />
-      </div>
-      <p className="text-sm text-gray-500">汇总了项目的“正在寻找”和个人主页上的需求（原心愿墙）。表达意向后，对方接受即可站内对话。</p>
-      {loading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <ProjectCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : list.length ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {list.map(({ need, project, person }) => {
-            const Icon = NEED_ICON[need.kind];
-            const isMine = need.ownerType === "person" ? person?.id === viewerId : !!project && project.team.some((t) => t.personId === viewerId && t.status === "confirmed");
-            const pending = db.intents.find((i) => i.fromId === viewerId && requesterView(i) === "waiting" && (i.needId === need.id || (project && i.projectId === project.id)));
-            return (
-              <div key={need.id} className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
-                <div className="flex items-start gap-3">
-                  <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border", NEED_TONE[need.kind])}>
-                    <Icon size={18} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge tone="gray" size="xs">
-                        {needLabel(need)}
-                      </Badge>
-                      {need.fromWish ? (
-                        <Badge tone="highlight" size="xs">
-                          来自心愿墙
-                        </Badge>
-                      ) : null}
-                      <span className="text-xs text-gray-400">{relativeTime(need.createdAt)}</span>
-                    </div>
-                    <p className="mt-1.5 font-semibold text-gray-900">{need.title}</p>
-                    {need.detail ? <p className="mt-1 line-clamp-2 text-sm text-gray-600">{need.detail}</p> : null}
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center gap-3 border-t border-gray-100 pt-4">
-                  {project ? (
-                    <Link href={`/p/${project.slug}`} className="flex min-w-0 flex-1 items-center gap-2 text-sm text-gray-700 hover:text-brand-700">
-                      <ProjectLogo text={project.logoText} tone={project.logoTone} size="xs" />
-                      <span className="truncate font-medium">{project.name}</span>
-                    </Link>
-                  ) : person ? (
-                    <Link href={`/u/${person.handle}`} className="flex min-w-0 flex-1 items-center gap-2 text-sm text-gray-700 hover:text-brand-700">
-                      <Avatar name={person.name} tone={person.avatarTone} size="xs" />
-                      <span className="truncate font-medium">{person.name}</span>
-                      <span className="truncate text-xs text-gray-400">{person.title}</span>
-                    </Link>
-                  ) : null}
-                  {isMine ? (
-                    <Badge tone="brand">我发布的</Badge>
-                  ) : pending ? (
-                    <Button size="xs" variant="secondary" disabled iconLeft={Clock}>
-                      等待回应
-                    </Button>
-                  ) : (
-                    <Button
-                      size="xs"
-                      variant="primary"
-                      onClick={() =>
-                        project
-                          ? openIntent({ type: "project", projectId: project.id, presetKind: need.kind === "help" ? "partner" : need.kind, needId: need.id })
-                          : person
-                            ? openIntent({ type: "need", needId: need.id, personId: person.id })
-                            : undefined
-                      }
-                    >
-                      {NEED_ACTION[need.kind]}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <Card padded={false}>
-          <EmptyState icon={Compass} title="这个分类下暂时没有需求" desc="换个分类看看，或者在你的主页写下你正在寻找的" action={<Button variant="secondary" onClick={() => setKind("all")}>看全部需求</Button>} />
-        </Card>
-      )}
-    </div>
-  );
-}
-
-function ListsTab() {
-  const db = useDB();
-  const lists = [...db.lists].sort((a, b) => Number(b.featured) - Number(a.featured) || b.updatedAt.localeCompare(a.updatedAt));
-  return lists.length ? (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">由 Pitch 运营和社区成员策展，每周更新。</p>
-        <Button size="sm" variant="link" href="/lists" iconRight={ListOrdered}>
-          榜单首页
-        </Button>
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {lists.map((l) => (
-          <ListCard key={l.id} list={l} />
-        ))}
-      </div>
-    </div>
-  ) : (
-    <Card padded={false}>
-      <EmptyState icon={ListOrdered} title="还没有榜单" />
-    </Card>
   );
 }

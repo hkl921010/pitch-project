@@ -12,8 +12,6 @@ import type {
   ContributionAction,
   Conversation,
   DB,
-  Feedback,
-  FeedbackCategory,
   IntentKind,
   MatchStage,
   NeedItem,
@@ -38,7 +36,6 @@ export interface Toast {
 
 export type IntentDraftTarget = (
   | { type: "project"; projectId: string; presetKind?: IntentKind; jobId?: string; needId?: string }
-  | { type: "need"; needId: string; personId: string }
   /** 直接找人：回应合作方“能提供”的资源、邀请开放合伙的人才、或交个朋友。 */
   | { type: "person"; personId: string; presetKind?: IntentKind; offerId?: string }
 ) & { /** 预填的说明开头，比如活动后跟进时带上“在某某活动上认识”。 */ prefill?: string };
@@ -72,8 +69,6 @@ interface AppState {
   completeOnboarding: (input: { role: Role; title: string; org: string; city: string; headline: string }) => void;
   updatePerson: (patch: Partial<Person>) => void;
   updateOpenStatus: (patch: Partial<OpenStatus>) => void;
-  addPersonNeed: (need: { kind: IntentKind; sub?: string; title: string; detail?: string }) => void;
-  removePersonNeed: (needId: string) => void;
 
   toggleFollow: (targetType: "project" | "person", targetId: string) => void;
 
@@ -106,12 +101,6 @@ interface AppState {
   deleteUpdate: (projectId: string, updateId: string) => void;
   applyWall: (projectId: string) => void;
 
-  addFeedback: (projectId: string, category: FeedbackCategory, text: string) => void;
-  patchFeedback: (feedbackId: string, patch: Partial<Pick<Feedback, "isPublic" | "helpful" | "reply">>) => void;
-
-  addEndorsement: (input: { targetType: "project" | "person"; targetId: string; dimension: string; text: string }) => void;
-  removeEndorsement: (id: string) => void;
-
   toggleWatch: (projectId: string) => void;
   setWatchNote: (projectId: string, note: string) => void;
   setWatchRemind: (projectId: string, remind: WatchRemind) => void;
@@ -124,14 +113,6 @@ interface AppState {
 
   applyDemoDay: (demoDayId: string, projectId: string, pitchNote: string) => void;
   voteDemoDay: (demoDayId: string, projectId: string) => void;
-
-  toggleListFollow: (listId: string) => void;
-  curateList: (
-    listId: string,
-    op: { add?: { targetId: string; note: string }; remove?: string; featured?: boolean; move?: { targetId: string; dir: -1 | 1 }; note?: { targetId: string; note: string } },
-  ) => void;
-  createList: (input: { title: string; desc: string; kind: "project" | "person" }) => string;
-  editList: (listId: string, input: { title: string; desc: string }) => void;
 
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
@@ -155,7 +136,7 @@ interface AppState {
 }
 
 /** 假数据结构或内容变化时递增，旧的本地数据会被替换为新种子。 */
-const SEED_VERSION = 12;
+const SEED_VERSION = 22;
 
 const uid = (prefix: string) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -310,18 +291,6 @@ export const useApp = create<AppState>()(
           me.openStatus = { ...me.openStatus, ...patch, updatedAt: nowIso() };
           recordContribution(s.db, me.id, "status_refresh", "刷新了开放状态");
         }),
-      addPersonNeed: (need) =>
-        set((s) => {
-          const me = s.db.people.find((p) => p.id === s.viewerId);
-          if (!me) return;
-          me.lookingFor.unshift({ id: uid("n"), ownerType: "person", ownerId: me.id, createdAt: nowIso(), ...need });
-        }),
-      removePersonNeed: (needId) =>
-        set((s) => {
-          const me = s.db.people.find((p) => p.id === s.viewerId);
-          if (me) me.lookingFor = me.lookingFor.filter((n) => n.id !== needId);
-        }),
-
       toggleFollow: (targetType, targetId) =>
         set((s) => {
           if (!s.viewerId) {
@@ -362,7 +331,6 @@ export const useApp = create<AppState>()(
           if (existing) return { ok: false, reason: "你已经对这个项目表达过意向，等待对方回应中" };
         } else {
           toId = input.target.personId;
-          needId = input.target.type === "need" ? input.target.needId : undefined;
           if (toId === viewer.id) return { ok: false, reason: "不能给自己发意向" };
           const existing = s.db.intents.find(
             (i) =>
@@ -658,54 +626,6 @@ export const useApp = create<AppState>()(
           pushNotification(s.db, { userId: "u-ake", type: "system", title: `${p.name}申请上发现页`, body: p.oneLiner, link: "/ops?tab=review" });
         }),
 
-      addFeedback: (projectId, category, text) =>
-        set((s) => {
-          const p = s.db.projects.find((x) => x.id === projectId);
-          if (!p || !s.viewerId) return;
-          s.db.feedback.unshift({ id: uid("fb"), projectId, fromId: s.viewerId, category, text, isPublic: false, helpful: false, at: nowIso() });
-          recordContribution(s.db, s.viewerId, "feedback", `给${p.name}写了一条建议`);
-          pushNotification(s.db, { userId: p.ownerId, type: "feedback", title: `${p.name}收到一条新建议`, body: `${category} · ${text.slice(0, 40)}`, link: `/dashboard/${p.slug}?tab=feedback` });
-        }),
-      patchFeedback: (feedbackId, patch) =>
-        set((s) => {
-          const f = s.db.feedback.find((x) => x.id === feedbackId);
-          if (!f) return;
-          const p = s.db.projects.find((x) => x.id === f.projectId);
-          const firstReply = !!patch.reply && !f.reply;
-          const firstHelpful = patch.helpful === true && !f.helpful;
-          Object.assign(f, patch);
-          if (p && (firstReply || firstHelpful))
-            pushNotification(s.db, {
-              userId: f.fromId,
-              type: "feedback",
-              title: firstReply ? `${p.name}回复了你的建议` : `${p.name}觉得你的建议有用`,
-              body: firstReply ? patch.reply!.slice(0, 60) : f.text.slice(0, 40),
-              link: `/p/${p.slug}#feedback`,
-            });
-        }),
-
-      addEndorsement: (input) =>
-        set((s) => {
-          if (!s.viewerId) return;
-          s.db.endorsements.unshift({ id: uid("en"), fromId: s.viewerId, at: nowIso(), ...input });
-          const targetName =
-            input.targetType === "person" ? personName(s.db, input.targetId) : s.db.projects.find((p) => p.id === input.targetId)?.name ?? "";
-          recordContribution(s.db, s.viewerId, "endorse", `为${targetName}写了一条背书`);
-          const ownerId = input.targetType === "person" ? input.targetId : s.db.projects.find((p) => p.id === input.targetId)?.ownerId;
-          if (ownerId)
-            pushNotification(s.db, {
-              userId: ownerId,
-              type: "endorsement",
-              title: `${personName(s.db, s.viewerId)} 为${input.targetType === "person" ? "你" : targetName}写了一条背书`,
-              body: `${input.dimension} · 「${input.text.slice(0, 40)}」`,
-              link: input.targetType === "person" ? `/u/${s.db.people.find((p) => p.id === ownerId)?.handle}` : `/p/${s.db.projects.find((p) => p.id === input.targetId)?.slug}`,
-            });
-        }),
-      removeEndorsement: (id) =>
-        set((s) => {
-          s.db.endorsements = s.db.endorsements.filter((e) => e.id !== id || e.fromId !== s.viewerId);
-        }),
-
       toggleWatch: (projectId) =>
         set((s) => {
           if (!s.viewerId) return;
@@ -788,64 +708,6 @@ export const useApp = create<AppState>()(
             recordContribution(s.db, viewerId, "vote", `在${dd.title}为${p.name}投票`);
           }
         }),
-
-      toggleListFollow: (listId) =>
-        set((s) => {
-          const l = s.db.lists.find((x) => x.id === listId);
-          if (!l || !s.viewerId) return;
-          if (l.followers.includes(s.viewerId)) l.followers = l.followers.filter((x) => x !== s.viewerId);
-          else l.followers.push(s.viewerId);
-        }),
-      curateList: (listId, op) =>
-        set((s) => {
-          const l = s.db.lists.find((x) => x.id === listId);
-          if (!l) return;
-          if (op.add && !l.items.some((i) => i.targetId === op.add!.targetId)) {
-            l.items.push(op.add);
-            const project = l.kind === "project" ? s.db.projects.find((p) => p.id === op.add!.targetId) : undefined;
-            const name = project?.name ?? personName(s.db, op.add.targetId);
-            const notified = new Set<string>();
-            const owners = project ? project.team.filter((m) => m.status === "confirmed" && (m.role === "owner" || m.role === "manager")).map((m) => m.personId) : [op.add.targetId];
-            owners.forEach((uid_) => {
-              if (uid_ === s.viewerId || notified.has(uid_)) return;
-              notified.add(uid_);
-              pushNotification(s.db, { userId: uid_, type: "list", title: `${project ? project.name : "你"}被收录进「${l.title}」`, body: `收录理由：${op.add!.note}`, link: `/lists/${l.id}` });
-            });
-            l.followers.forEach((f) => {
-              if (f === s.viewerId || notified.has(f)) return;
-              notified.add(f);
-              pushNotification(s.db, { userId: f, type: "list", title: `你关注的榜单「${l.title}」新增了${name}`, body: op.add!.note, link: `/lists/${l.id}` });
-            });
-          }
-          if (op.remove) l.items = l.items.filter((i) => i.targetId !== op.remove);
-          if (op.move) {
-            const i = l.items.findIndex((x) => x.targetId === op.move!.targetId);
-            const j = i + op.move.dir;
-            if (i >= 0 && j >= 0 && j < l.items.length) [l.items[i], l.items[j]] = [l.items[j], l.items[i]];
-          }
-          if (op.note) {
-            const it = l.items.find((x) => x.targetId === op.note!.targetId);
-            if (it) it.note = op.note.note;
-          }
-          if (op.featured !== undefined) l.featured = op.featured;
-          l.updatedAt = nowIso();
-        }),
-      editList: (listId, input) =>
-        set((s) => {
-          const l = s.db.lists.find((x) => x.id === listId);
-          if (!l) return;
-          l.title = input.title;
-          l.desc = input.desc;
-          l.updatedAt = nowIso();
-        }),
-      createList: (input) => {
-        const id = uid("ls");
-        set((s) => {
-          if (!s.viewerId) return;
-          s.db.lists.unshift({ id, ...input, curatorId: s.viewerId, items: [], followers: [], featured: false, updatedAt: nowIso() });
-        });
-        return id;
-      },
 
       markNotificationRead: (id) =>
         set((s) => {

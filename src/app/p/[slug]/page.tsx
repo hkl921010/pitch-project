@@ -1,59 +1,24 @@
 "use client";
 
-import {
-  Bookmark,
-  BookmarkCheck,
-  Briefcase,
-  CalendarDays,
-  Eye,
-  ExternalLink,
-  Globe,
-  Link2,
-  LayoutDashboard,
-  Lock,
-  MapPin,
-  Newspaper,
-  PenLine,
-  Plus,
-  Radio,
-  Share2,
-  Users,
-} from "lucide-react";
+import { Bookmark, BookmarkCheck, ChevronDown, Eye, Globe, Link2, LayoutDashboard, Lock, MapPin, PenLine, Plus, Share2, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { EndorsementBlock } from "@/components/biz/endorse";
-import { FeedbackSection } from "@/components/biz/feedback-section";
 import { FollowButton } from "@/components/biz/follow-button";
-import { Gallery } from "@/components/biz/gallery";
 import { IntentBar, IntentCard } from "@/components/biz/intent-card";
-import { ListedIn } from "@/components/biz/list-card";
-import { NEED_ICON, NEED_TONE, needLabel } from "@/components/biz/looking-for";
+import { needIcon, needLabel, needTone, serviceAction } from "@/components/biz/looking-for";
 import { KnownSignal, ProjectRow } from "@/components/biz/project-card";
 import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
-import { Avatar, Badge, Card, Cover, EmptyState, ProgressRing, ProjectLogo, Tag, Tooltip } from "@/components/ui/display";
-import { UPDATE_TEMPLATES } from "@/data/constants";
-import { formatDate, formatDateTime, relativeTime } from "@/data/time";
-import type { IntentKind, Project, TrafficSource } from "@/data/types";
+import { Avatar, Badge, Card, EmptyState, ProgressRing, ProjectLogo, Tag, Tooltip } from "@/components/ui/display";
+import { TONES } from "@/data/constants";
+import { formatDate } from "@/data/time";
+import type { IntentKind, NeedItem, Project, TrafficSource } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useHashScroll } from "@/lib/use-hash-scroll";
 import { useApp } from "@/store/app-store";
-import {
-  badgeDefs,
-  canEditProject,
-  canManageProject,
-  endorsementsFor,
-  eventStatus,
-  followerCount,
-  getPerson,
-  getProjectBySlug,
-  projectCompletion,
-  roleText,
-  useDB,
-  useViewer,
-} from "@/store/selectors";
+import { badgeDefs, canEditProject, canManageProject, followerCount, getPerson, getProjectBySlug, projectCompletion, roleText, useDB, useViewer } from "@/store/selectors";
 
 const SOURCES: TrafficSource[] = ["wechat", "moments", "poster", "discover", "demoday", "article", "direct"];
 
@@ -97,8 +62,8 @@ function ProjectView() {
   const canEdit = canEditProject(p, viewer?.id ?? null);
   const manage = canManageProject(p, viewer?.id ?? null);
   const team = p.team.filter((t) => t.status === "confirmed" || manage);
-  const articles = db.articles.filter((a) => a.projectIds.includes(p.id));
-  const events = db.events.filter((e) => e.projectIds.includes(p.id));
+  const cooperations = p.lookingFor.filter((n) => n.coop);
+  const services = p.lookingFor.filter((n) => n.service);
   const similar = db.projects
     .filter((x) => x.id !== p.id && x.visibility === "public" && x.wall === "approved" && (x.track === p.track || x.tags.some((t) => p.tags.includes(t))))
     .slice(0, 4);
@@ -155,118 +120,62 @@ function ProjectView() {
       ) : null}
 
       <Page className="pb-28 lg:pb-8">
-        <Gallery items={p.gallery} coverTone={p.coverTone} editableHref={canEdit ? `/p/${p.slug}/edit#gallery` : undefined} />
-
-        <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-start">
-          <ProjectLogo text={p.logoText} tone={p.logoTone} size="2xl" className="relative z-10 -mt-16 ring-4 ring-white sm:-mt-14" />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">{p.name}</h1>
-              {badges.map((b) => (
-                <Tooltip key={b.id} content={b.desc}>
-                  <Badge tone={b.tone}>{b.label}</Badge>
-                </Tooltip>
-              ))}
-            </div>
-            <p className="mt-1.5 text-lg text-gray-600">{p.oneLiner}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-500">
-              <Tag>{p.track}</Tag>
-              {p.tags.map((t) => (
-                <Tag key={t}>{t}</Tag>
-              ))}
-              <span className="inline-flex items-center gap-1">
-                <MapPin size={14} />
-                {p.region || "未填写地区"}
-              </span>
-              {p.website ? (
-                <a className="inline-flex items-center gap-1 hover:text-brand-700" href={`https://${p.website}`} target="_blank" rel="noreferrer">
-                  <Globe size={14} />
-                  {p.website}
-                </a>
-              ) : null}
-              <span className="inline-flex items-center gap-1">
-                <Users size={14} />
-                {followerCount(db, "project", p.id)} 关注
-              </span>
-            </div>
-            <KnownSignal targetType="project" targetId={p.id} className="mt-3" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {!isMember ? <FollowButton targetType="project" targetId={p.id} size="md" /> : null}
-            {viewer?.role === "investor" ? (
-              <Button
-                variant="secondary"
-                iconLeft={watching ? BookmarkCheck : Bookmark}
-                onClick={() => {
-                  toggleWatch(p.id);
-                  toast({ tone: "success", title: watching ? "已移出观察清单" : "已加入观察清单", body: watching ? undefined : "项目更新时会提醒你，可以在清单里写私人备注" });
-                }}
-              >
-                {watching ? "已在观察清单" : "加入观察清单"}
-              </Button>
-            ) : null}
-            <Button variant="secondary" iconOnly={Share2} aria-label="分享" onClick={share} />
-          </div>
-        </div>
+        <IntroHero
+          project={p}
+          badges={badges}
+          followers={followerCount(db, "project", p.id)}
+          canEdit={canEdit}
+          isMember={isMember}
+          watching={watching}
+          showWatch={viewer?.role === "investor"}
+          onWatch={() => {
+            toggleWatch(p.id);
+            toast({ tone: "success", title: watching ? "已移出观察清单" : "已加入观察清单", body: watching ? undefined : "项目更新时会提醒你，可以在清单里写私人备注" });
+          }}
+          onShare={share}
+        />
 
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-10">
-            <Section id="looking" title="正在寻找" desc="直接表达意向，对方接受后即可站内对话">
-              {p.lookingFor.length ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {p.lookingFor.map((n) => {
-                    const Icon = NEED_ICON[n.kind];
-                    return (
-                      <div key={n.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-xs">
-                        <div className="flex items-start gap-3">
-                          <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", NEED_TONE[n.kind])}>
-                            <Icon size={18} />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium text-gray-500">{needLabel(n)}</p>
-                            <p className="font-semibold text-gray-900">{n.title}</p>
-                            {n.detail ? <p className="mt-0.5 text-sm text-gray-600">{n.detail}</p> : null}
-                          </div>
-                        </div>
-                        {!isMember ? (
-                          <Button
-                            size="xs"
-                            variant="secondary"
-                            className="self-start"
-                            onClick={() => openIntent({ type: "project", projectId: p.id, presetKind: (n.kind === "help" ? "partner" : n.kind) as IntentKind, needId: n.id })}
-                          >
-                            {n.kind === "invest" ? "我想投资" : n.kind === "join" ? "我想加入" : "我能帮上忙"}
-                          </Button>
-                        ) : null}
-                      </div>
-                    );
-                  })}
+            <Section id="looking" title="寻找合作" desc="我想要什么，以及我能付出什么。点开看条件和案例。">
+              {cooperations.length ? (
+                <div className="flex flex-col gap-4">
+                  {cooperations.map((n) => (
+                    <NeedArticle
+                      key={n.id}
+                      need={n}
+                      payLabel="愿意付出什么"
+                      action={isMember ? undefined : coopAction(n)}
+                      onAction={() => openIntent({ type: "project", projectId: p.id, presetKind: (n.kind === "help" ? "partner" : n.kind) as IntentKind, needId: n.id })}
+                    />
+                  ))}
                 </div>
               ) : (
-                <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#looking`} title="还没写正在寻找什么" cta="写下正在寻找" desc="写清楚要融资、渠道还是合伙人，对的人才会来找你" />
+                <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#looking`} title="还没写寻找合作" cta="写下合作" desc="写清要供应链、渠道还是融资，以及你愿意付出什么" />
               )}
             </Section>
 
-            <Section id="about" title="关于项目">
-              {p.intro || p.product || p.edge ? (
-                <div className="flex flex-col gap-6">
-                  {[
-                    { title: "在做什么", body: p.intro },
-                    { title: "在卖什么", body: p.product },
-                    { title: "凭什么", body: p.edge },
-                  ]
-                    .filter((x) => x.body)
-                    .map((x) => (
-                      <div key={x.title}>
-                        <h3 className="text-sm font-semibold text-gray-900">{x.title}</h3>
-                        <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{x.body}</p>
-                      </div>
+            {services.length || canEdit ? (
+              <Section id="services" title="寻找服务" desc="自己花钱买的：朋友、新媒体、招人，或其他。">
+                {services.length ? (
+                  <div className="flex flex-col gap-4">
+                    {services.map((n) => (
+                      <NeedArticle
+                        key={n.id}
+                        need={n}
+                        payLabel="愿意付多少"
+                        action={isMember || !n.service ? undefined : serviceAction(n.service)}
+                        onAction={() => openIntent({ type: "project", projectId: p.id, presetKind: "partner", needId: n.id })}
+                      />
                     ))}
-                </div>
-              ) : (
-                <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#about`} title="项目介绍还是空的" cta="补充介绍" desc="上传 BP，AI 可以帮你一键生成" />
-              )}
-            </Section>
+                  </div>
+                ) : (
+                  <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#services`} title="还没写寻找服务" cta="写下服务" desc="比如找朋友介绍、新媒体代运营，或招人" />
+                )}
+              </Section>
+            ) : null}
+
+            <ProjectAbout project={p} />
 
             <Section id="team" title="团队" desc="成员确认后，项目会出现在TA的个人主页上">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -299,125 +208,6 @@ function ProjectView() {
                 ) : null}
               </div>
             </Section>
-
-            {p.jobs.length ? (
-              <Section id="jobs" title="在招岗位" desc={`${p.jobs.length} 个岗位`}>
-                <div className="flex flex-col divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-                  {p.jobs.map((j) => (
-                    <div key={j.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                        <Briefcase size={18} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-gray-900">
-                          {j.title}
-                          <Badge tone={j.type === "合伙人" ? "highlight" : "gray"} size="xs" className="ml-2">
-                            {j.type}
-                          </Badge>
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {j.location} · {j.desc}
-                        </p>
-                      </div>
-                      {!isMember ? (
-                        <Button size="sm" variant="secondary" onClick={() => openIntent({ type: "project", projectId: p.id, presetKind: "join", jobId: j.id })}>
-                          我想加入
-                        </Button>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            ) : null}
-
-            <Section
-              id="updates"
-              title="动态"
-              desc="项目的每一步进展，关注者和观察清单会收到提醒"
-              action={
-                canEdit ? (
-                  <Button size="sm" variant="secondary" iconLeft={Plus} href={`/dashboard/${p.slug}?tab=updates`}>
-                    发布动态
-                  </Button>
-                ) : null
-              }
-            >
-              {p.updates.length ? (
-                <ol className="relative flex flex-col gap-6 border-l border-gray-200 pl-6">
-                  {p.updates.map((u) => {
-                    const author = getPerson(db, u.authorId);
-                    return (
-                      <li key={u.id} className="relative">
-                        <span className="absolute top-1.5 -left-[29px] h-2.5 w-2.5 rounded-full bg-brand-600 ring-4 ring-white" />
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                          <Badge tone="brand" size="xs">
-                            {UPDATE_TEMPLATES[u.template].label}
-                          </Badge>
-                          <span>{formatDate(u.at)}</span>
-                          <span>· {author?.name}</span>
-                        </div>
-                        <p className="mt-1.5 font-semibold text-gray-900">{u.title}</p>
-                        <p className="mt-1 text-[15px] text-gray-700">{u.body}</p>
-                      </li>
-                    );
-                  })}
-                </ol>
-              ) : (
-                <EmptyBox canEdit={canEdit} href={`/dashboard/${p.slug}?tab=updates`} title="还没有动态" cta="发第一条动态" desc="用模板 30 秒发一条：上线、融资、招人、获奖、数据里程碑" />
-              )}
-            </Section>
-
-            <Section id="endorse" title="背书" desc="署名、按维度计数，只有正向信号">
-              <EndorsementBlock targetType="project" targetId={p.id} targetName={p.name} canEndorse={!isMember} />
-            </Section>
-
-            <Section id="feedback" title="建议区" desc="给项目提建议，默认只有项目方能看到">
-              <FeedbackSection project={p} />
-            </Section>
-
-            {articles.length ? (
-              <Section id="press" title="Pitch 报道">
-                <div className="flex flex-col gap-3">
-                  {articles.map((a) => (
-                    <Link key={a.id} href={`/feed?tab=articles&article=${a.id}`} className="group flex gap-4 rounded-xl border border-gray-200 bg-white p-3 hover:border-gray-300">
-                      <Cover tone={a.coverTone} className="h-20 w-32 shrink-0 rounded-lg" />
-                      <div className="min-w-0 py-1">
-                        <p className="text-xs font-medium text-brand-700">
-                          <Newspaper size={12} className="mr-1 inline" />
-                          {a.column}
-                        </p>
-                        <p className="mt-1 font-semibold text-gray-900 group-hover:text-brand-700">{a.title}</p>
-                        <p className="mt-0.5 line-clamp-1 text-sm text-gray-500">{a.summary}</p>
-                      </div>
-                      <ExternalLink size={16} className="ml-auto shrink-0 self-center text-gray-400" />
-                    </Link>
-                  ))}
-                </div>
-              </Section>
-            ) : null}
-
-            {events.length ? (
-              <Section id="events" title="参与的活动">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {events.map((e) => {
-                    const st = eventStatus(e);
-                    return (
-                      <Link key={e.id} href={`/events/${e.id}`} className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 hover:border-gray-300">
-                        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg", st === "live" ? "bg-error-50 text-error-600" : "bg-gray-100 text-gray-600")}>
-                          {st === "live" ? <Radio size={18} /> : <CalendarDays size={18} />}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-gray-900">{e.title}</p>
-                          <p className="text-xs text-gray-500">
-                            {st === "live" ? "正在直播" : st === "upcoming" ? formatDateTime(e.start) : `${formatDate(e.start)} 已结束`} · {e.kind === "online" ? "线上" : e.city}
-                          </p>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </Section>
-            ) : null}
           </div>
 
           <aside className="flex flex-col gap-6">
@@ -430,7 +220,6 @@ function ProjectView() {
             <div className="lg:hidden">
               <StatsMini project={p} />
             </div>
-            <ListedIn targetId={p.id} />
             {similar.length ? (
               <Card>
                 <p className="mb-4 text-sm font-semibold text-gray-900">相似项目</p>
@@ -465,8 +254,8 @@ function StatsMini({ project: p }: { project: Project }) {
     <Card className="grid grid-cols-3 divide-x divide-gray-100 p-0" padded={false}>
       {[
         { label: "关注", value: followerCount(db, "project", p.id) },
-        { label: "背书", value: endorsementsFor(db, "project", p.id).length },
-        { label: "近两周浏览", value: views, icon: Eye },
+        { label: "合作", value: p.lookingFor.filter((n) => n.coop).length },
+        { label: "近两周浏览", value: views },
       ].map((s) => (
         <div key={s.label} className="flex flex-col items-center gap-0.5 py-4">
           <span className="text-xl font-semibold text-gray-900 tabular-nums">{s.value}</span>
@@ -474,6 +263,193 @@ function StatsMini({ project: p }: { project: Project }) {
         </div>
       ))}
     </Card>
+  );
+}
+
+function NeedArticle({ need: n, payLabel, action, onAction }: { need: NeedItem; payLabel: string; action?: string; onAction: () => void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const sync = () => {
+      if (decodeURIComponent(window.location.hash.slice(1)) === `need-${n.id}`) setOpen(true);
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, [n.id]);
+  const Icon = needIcon(n);
+  return (
+    <article id={`need-${n.id}`} className="scroll-mt-24 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
+      <button type="button" className="flex w-full items-start gap-4 p-5 text-left sm:p-6" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border", needTone(n))}>
+          <Icon size={22} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="text-sm font-medium text-gray-500">{needLabel(n)}</span>
+          <span className="mt-1 block text-xl font-semibold text-gray-900">{n.title}</span>
+          {n.summary ? <span className="mt-2 block text-sm leading-6 text-gray-600">{n.summary}</span> : null}
+        </span>
+        <ChevronDown size={20} className={cn("mt-1 shrink-0 text-gray-400 transition-transform", open && "rotate-180")} />
+      </button>
+      {open ? (
+        <div className="border-t border-gray-100 px-5 pt-5 pb-6 sm:px-6">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900">在找什么</h4>
+              <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{n.detail || "还没有写要找的对象。"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900">{payLabel}</h4>
+              <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{n.terms || "还没有写条件。"}</p>
+            </div>
+          </div>
+          {n.story ? (
+            <div className="mt-5 rounded-xl bg-gray-50 p-4">
+              <h4 className="text-sm font-semibold text-gray-900">再看细一点</h4>
+              <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{n.story}</p>
+            </div>
+          ) : null}
+          {n.storyImages?.length ? (
+            <div className="mt-4 grid grid-cols-1 gap-3">
+              {n.storyImages.map((img) => (
+                <figure key={img.src} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                  <img src={img.src} alt={img.caption} className="w-full" />
+                  <figcaption className="px-3 py-2 text-sm text-gray-600">{img.caption}</figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : null}
+          {action ? (
+            <Button size="sm" variant="primary" className="mt-5" onClick={onAction}>
+              {action}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function coopAction(n: NeedItem) {
+  if (n.sub === "点位") return "我想了解这笔点位投资";
+  if (n.sub === "股权") return "我想聊股权";
+  if (n.coop === "funding") return "我想对接这笔融资";
+  if (n.coop === "supply") return "我能供货";
+  if (n.coop === "channel") return "我有渠道";
+  return "我能合作";
+}
+
+function ProjectAbout({ project: p }: { project: Project }) {
+  const images = p.gallery.filter((g) => g.image);
+  if (!p.profile && !images.length) return null;
+  return (
+    <Section id="profile" title="项目介绍" desc="更完整的业务细节和项目图片。合作条件在上面每条里。">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs sm:p-6">
+        {p.profile ? <p className="text-[15px] leading-7 whitespace-pre-line text-gray-700">{p.profile}</p> : null}
+        {images.length ? (
+          <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", p.profile && "mt-6")}>
+            {images.map((g) => (
+              <figure key={g.id} className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                <img src={g.image} alt={g.caption} className="w-full" />
+                <figcaption className="bg-white px-3 py-2 text-sm text-gray-600">{g.caption}</figcaption>
+              </figure>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </Section>
+  );
+}
+
+function IntroHero({
+  project: p,
+  badges,
+  followers,
+  canEdit,
+  isMember,
+  watching,
+  showWatch,
+  onWatch,
+  onShare,
+}: {
+  project: Project;
+  badges: { id: string; label: string; desc: string; tone: "gray" | "brand" | "success" | "warning" | "error" | "blue" | "highlight" | "dark" }[];
+  followers: number;
+  canEdit: boolean;
+  isMember: boolean;
+  watching: boolean;
+  showWatch: boolean;
+  onWatch: () => void;
+  onShare: () => void;
+}) {
+  const tone = TONES[p.coverTone % TONES.length];
+  const about = [
+    { title: "在做什么", body: p.intro },
+    { title: "在卖什么", body: p.product },
+    { title: "凭什么", body: p.edge },
+  ].filter((x) => x.body);
+  return (
+    <section className="overflow-hidden rounded-2xl" style={{ background: `linear-gradient(135deg, ${tone.from} 0%, ${tone.to} 100%)` }}>
+      <div className="flex flex-col gap-6 p-5 sm:p-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+          <ProjectLogo text={p.logoText} tone={p.logoTone} size="2xl" className="ring-4 ring-white/80" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{p.name}</h1>
+              {badges.map((b) => (
+                <Tooltip key={b.id} content={b.desc}>
+                  <Badge tone={b.tone}>{b.label}</Badge>
+                </Tooltip>
+              ))}
+            </div>
+            <p className="mt-1.5 text-lg text-white/90">{p.oneLiner}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/85">
+              <Tag>{p.track}</Tag>
+              {p.tags.map((t) => (
+                <Tag key={t}>{t}</Tag>
+              ))}
+              <span className="inline-flex items-center gap-1">
+                <MapPin size={14} />
+                {p.region || "未填写地区"}
+              </span>
+              {p.website ? (
+                <a className="inline-flex items-center gap-1 hover:text-white" href={`https://${p.website}`} target="_blank" rel="noreferrer">
+                  <Globe size={14} />
+                  {p.website}
+                </a>
+              ) : null}
+              <span className="inline-flex items-center gap-1">
+                <Users size={14} />
+                {followers} 关注
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {!isMember ? <FollowButton targetType="project" targetId={p.id} size="md" /> : null}
+            {showWatch ? (
+              <Button variant="secondary" iconLeft={watching ? BookmarkCheck : Bookmark} onClick={onWatch}>
+                {watching ? "已在观察清单" : "加入观察清单"}
+              </Button>
+            ) : null}
+            <Button variant="secondary" iconOnly={Share2} aria-label="分享" onClick={onShare} />
+          </div>
+        </div>
+        <div className="rounded-xl bg-white p-5 sm:p-6">
+          {about.length ? (
+            <div className="flex flex-col gap-5">
+              {about.map((x) => (
+                <div key={x.title}>
+                  <h2 className="text-sm font-semibold text-gray-900">{x.title}</h2>
+                  <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{x.body}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#about`} title="项目介绍还是空的" cta="补充介绍" desc="先写清在做什么、在卖什么、凭什么" />
+          )}
+          <KnownSignal targetType="project" targetId={p.id} className="mt-5" />
+        </div>
+      </div>
+    </section>
   );
 }
 

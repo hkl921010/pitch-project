@@ -3,12 +3,10 @@
 import {
   ArrowRight,
   Bell,
-  Briefcase,
   CalendarClock,
   ChevronRight,
   Compass,
   Eye,
-  Handshake,
   Inbox,
   MessageCircle,
   Mic,
@@ -23,7 +21,6 @@ import {
 import Link from "next/link";
 
 import { FirstStepsCard } from "@/components/biz/first-steps";
-import { NEED_ICON, NEED_TONE, needLabel } from "@/components/biz/looking-for";
 import { slotPhase } from "@/components/biz/office-hours";
 import { PersonRow } from "@/components/biz/person-card";
 import { ProjectCard, ProjectRow } from "@/components/biz/project-card";
@@ -37,7 +34,6 @@ import type { Person } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useApp } from "@/store/app-store";
 import {
-  allNeeds,
   currentDemoDay,
   eventStatus,
   followerCount,
@@ -321,73 +317,33 @@ function InvestorHome({ viewer }: { viewer: Person }) {
   );
 }
 
-function TalentHome() {
+function SeekingProjects({ title, desc }: { title: string; desc: string }) {
   const db = useDB();
-  const openIntent = useApp((s) => s.openIntent);
-  const jobs = db.projects.filter((p) => p.visibility === "public" && p.wall === "approved").flatMap((p) => p.jobs.map((j) => ({ job: j, project: p })));
+  const projects = db.projects.filter((p) => p.visibility === "public" && p.wall === "approved" && p.lookingFor.some((n) => n.coop || n.service)).slice(0, 4);
   return (
     <section>
-      <SectionHeader title="在招岗位" desc="项目方直接发布，表达意向后对方接受即可对话" action={<Button size="sm" variant="link" href="/discover?tab=needs&kind=join" iconRight={ArrowRight}>全部</Button>} />
-      <Card padded={false} className="mt-4 divide-y divide-gray-100">
-        {jobs.length ? (
-          jobs.map(({ job, project }) => (
-            <div key={job.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
-              <ProjectRow project={project} meta={`${job.title} · ${job.type} · ${job.location}`} />
-              <Button size="sm" variant="secondary" iconLeft={Briefcase} onClick={() => openIntent({ type: "project", projectId: project.id, presetKind: "join", jobId: job.id })}>
-                我想加入
-              </Button>
-            </div>
-          ))
-        ) : (
-          <EmptyState compact icon={Briefcase} title="暂时没有在招岗位" desc="关注感兴趣的项目，招人时会第一时间通知你" />
-        )}
-      </Card>
+      <SectionHeader title={title} desc={desc} action={<Button size="sm" variant="link" href="/discover" iconRight={ArrowRight}>全部项目</Button>} />
+      {projects.length ? (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {projects.map((p) => (
+            <ProjectCard key={p.id} project={p} />
+          ))}
+        </div>
+      ) : (
+        <Card padded={false} className="mt-4">
+          <EmptyState compact icon={Compass} title="暂时没有公开项目" action={<Button size="sm" href="/discover">去发现页</Button>} />
+        </Card>
+      )}
     </section>
   );
 }
 
+function TalentHome() {
+  return <SeekingProjects title="正在寻找合作的项目" desc="打开项目页，看清对方要供应链、渠道还是融资" />;
+}
+
 function PartnerHome() {
-  const db = useDB();
-  const viewerId = useApp((s) => s.viewerId);
-  const openIntent = useApp((s) => s.openIntent);
-  const needs = allNeeds(db).filter((n) => (n.need.kind === "partner" || n.need.kind === "help") && n.person?.id !== viewerId).slice(0, 6);
-  return (
-    <section>
-      <SectionHeader title="等你回应的合作需求" desc="来自项目的“正在寻找”和个人主页的求助" action={<Button size="sm" variant="link" href="/discover?tab=needs&kind=partner" iconRight={ArrowRight}>全部需求</Button>} />
-      <Card padded={false} className="mt-4 divide-y divide-gray-100">
-        {needs.length ? (
-          needs.map(({ need, project, person }) => {
-            const Icon = NEED_ICON[need.kind];
-            return (
-              <div key={need.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center">
-                <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border", NEED_TONE[need.kind])}>
-                  <Icon size={18} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-900">{need.title}</p>
-                  <p className="truncate text-xs text-gray-500">
-                    {needLabel(need)} · {project ? project.name : person?.name} · {relativeTime(need.createdAt)}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  iconLeft={Handshake}
-                  onClick={() =>
-                    project ? openIntent({ type: "project", projectId: project.id, presetKind: need.kind, needId: need.id }) : person ? openIntent({ type: "need", needId: need.id, personId: person.id }) : undefined
-                  }
-                >
-                  我能帮上忙
-                </Button>
-              </div>
-            );
-          })
-        ) : (
-          <EmptyState compact icon={Handshake} title="暂时没有新的合作需求" />
-        )}
-      </Card>
-    </section>
-  );
+  return <SeekingProjects title="可以合作的项目" desc="打开项目页，看清对方愿意怎么合作、愿意付多少" />;
 }
 
 function OpsHome() {

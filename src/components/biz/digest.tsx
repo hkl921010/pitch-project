@@ -1,17 +1,16 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ListOrdered, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { Avatar, Cover, ProjectLogo } from "@/components/ui/display";
-import { INTENT_KIND_LABEL, NOTIFICATION_TYPES, ROLE_LABEL, SOURCE_LABEL } from "@/data/constants";
+import { INTENT_KIND_LABEL, NOTIFICATION_TYPES, SOURCE_LABEL } from "@/data/constants";
 import { formatDate, formatDateTime, nowMs } from "@/data/time";
-import type { Article, CuratedList, DB, Intent, Notification, Person, PitchEvent, Project, TrafficSource } from "@/data/types";
+import type { Article, DB, Intent, Notification, Person, PitchEvent, Project, TrafficSource } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { notifyPrefsOf } from "@/store/app-store";
 import {
-  allNeeds,
   anonymousProfile,
   currentDemoDay,
   eventStatus,
@@ -24,7 +23,6 @@ import {
   projectCompletion,
   requesterView,
   watchUpdates,
-  type NeedWithOwner,
 } from "@/store/selectors";
 
 export type DigestRole = "founder" | "investor" | "general";
@@ -83,7 +81,6 @@ export type DigestData =
       newFollows: number;
       newIntents: number;
       pending: Intent[];
-      feedbackTodo: number;
       watchers: number;
       topSource?: { label: string; share: number };
       todos: DigestTodo[];
@@ -99,7 +96,6 @@ export type DigestData =
       slots: { id: string; start: string; topic: string; status: "requested" | "confirmed"; who?: Person }[];
       waiting: number;
       accepted: number;
-      lists: CuratedList[];
       articles: Article[];
       events: PitchEvent[];
     }
@@ -108,10 +104,7 @@ export type DigestData =
       person: Person;
       pending: number;
       invites: Project[];
-      needs: NeedWithOwner[];
-      jobs: { project: Project; title: string; type: string }[];
       hot: Project[];
-      lists: CuratedList[];
       articles: Article[];
       events: PitchEvent[];
     };
@@ -125,10 +118,6 @@ function upcomingEvents(db: DB) {
 
 export function buildDigest(db: DB, person: Person, role: DigestRole): DigestData | null {
   const events = upcomingEvents(db);
-  const lists = db.lists
-    .filter((l) => l.featured && l.items.length)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 2);
   const articles = [...db.articles].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 2);
 
   if (role === "founder") {
@@ -139,7 +128,6 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
     const prevViews = sum(v.slice(-14, -7));
     const intents = db.intents.filter((i) => i.projectId === project.id);
     const pending = intents.filter((i) => i.status === "pending");
-    const feedbackTodo = db.feedback.filter((f) => f.projectId === project.id && !f.reply && !f.helpful).length;
     const invited = project.team.filter((t) => t.status === "invited").length;
     const completion = projectCompletion(project);
     const lastUpdate = [...project.updates].sort((a, b) => b.at.localeCompare(a.at))[0];
@@ -151,7 +139,6 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
 
     const todos: DigestTodo[] = [];
     if (pending.length) todos.push({ title: `回应 ${pending.length} 条意向`, desc: "回复速度会显示在项目页上", href: `${base}?tab=intents` });
-    if (feedbackTodo) todos.push({ title: `处理 ${feedbackTodo} 条建议`, desc: "标记有用或回复，对方会收到通知", href: `${base}?tab=feedback` });
     if (invited) todos.push({ title: `${invited} 位成员还没确认`, desc: "确认后项目会出现在 TA 的主页上", href: `${base}?tab=team` });
     if (!lastUpdate || !within(lastUpdate.at, 14)) todos.push({ title: lastUpdate ? "两周没发动态了" : "发第一条动态", desc: "关注和观察你的人会收到提醒", href: `${base}?tab=updates` });
     if (dd && entry?.status === "shortlisted") todos.push({ title: `${dd.title}入围了，拉朋友投票`, desc: `目前 ${dd.votes[project.id]?.length ?? 0} 票`, href: "/demo-day" });
@@ -169,7 +156,6 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
       newFollows: db.follows.filter((f) => f.targetType === "project" && f.targetId === project.id && within(f.at, 7)).length,
       newIntents: intents.filter((i) => within(i.createdAt, 7)).length,
       pending,
-      feedbackTodo,
       watchers: db.watch.filter((w) => w.projectId === project.id).length,
       topSource: top && srcTotal ? { label: SOURCE_LABEL[top[0]], share: Math.round((top[1] / srcTotal) * 100) } : undefined,
       todos: todos.slice(0, 4),
@@ -209,33 +195,20 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
         .map((s) => ({ id: s.id, start: s.start, topic: s.topic, status: s.status as "requested" | "confirmed", who: getPerson(db, s.bookedBy) })),
       waiting: sent.filter((i) => requesterView(i) === "waiting").length,
       accepted: sent.filter((i) => i.status === "accepted" && i.respondedAt && within(i.respondedAt, 7)).length,
-      lists,
       articles,
       events,
     };
   }
 
-  const kind = person.role === "talent" ? "join" : person.role === "partner" ? "partner" : null;
   return {
     kind: "general",
     person,
     pending: intentsReceived(db, person.id).filter((i) => i.status === "pending").length,
     invites: db.projects.filter((p) => p.team.some((m) => m.personId === person.id && m.status === "invited")),
-    needs: allNeeds(db)
-      .filter((n) => (!kind || n.need.kind === kind) && n.person?.id !== person.id && !n.project?.team.some((m) => m.personId === person.id))
-      .slice(0, 3),
-    jobs:
-      person.role === "talent"
-        ? db.projects
-            .filter((p) => p.visibility === "public" && p.wall === "approved")
-            .flatMap((p) => p.jobs.map((j) => ({ project: p, title: j.title, type: j.type })))
-            .slice(0, 3)
-        : [],
     hot: db.projects
       .filter((p) => p.visibility === "public" && p.wall === "approved")
       .sort((a, b) => followerCount(db, "project", b.id) - followerCount(db, "project", a.id))
       .slice(0, 3),
-    lists,
     articles,
     events,
   };
@@ -243,7 +216,7 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
 
 /** “有待办时才发”：只看需要用户回应的事。 */
 export function digestHasTodo(d: DigestData): boolean {
-  if (d.kind === "founder") return d.pending.length > 0 || d.feedbackTodo > 0 || d.todos.some((t) => t.href.endsWith("tab=team"));
+  if (d.kind === "founder") return d.pending.length > 0 || d.todos.some((t) => t.href.endsWith("tab=team"));
   if (d.kind === "investor") return d.slots.some((s) => s.status === "requested") || d.fresh.length > 0;
   return d.pending > 0 || d.invites.length > 0;
 }
@@ -278,7 +251,6 @@ export function digestSummary(d: DigestData): { title: string; fields: [string, 
     title: "Pitch 每周精选",
     fields: [
       ["待你回应", d.pending + d.invites.length ? `${d.pending + d.invites.length} 件` : "无"],
-      ["正在寻找", d.needs.length ? `${d.needs.length} 条和你相关` : "暂无"],
       ["热门项目", d.hot.map((p) => p.name).join("、") || "暂无"],
     ],
     remark: d.articles[0] ? `本周报道：${d.articles[0].title}` : "看看本周的新项目",
@@ -353,29 +325,6 @@ function EventRows({ events }: { events: PitchEvent[] }) {
         />
       ))}
     </div>
-  );
-}
-
-function ListSection({ lists }: { lists: CuratedList[] }) {
-  if (!lists.length) return null;
-  return (
-    <EmailSection title="运营精选榜单" desc="每条收录都写了理由">
-      <div className="flex flex-col">
-        {lists.map((l) => (
-          <Row
-            key={l.id}
-            href={`/lists/${l.id}`}
-            left={
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-highlight-soft text-highlight-ink">
-                <ListOrdered size={18} />
-              </span>
-            }
-            title={l.title}
-            desc={`${l.items.length} 个${l.kind === "project" ? "项目" : "人"} · ${l.items[0].note}`}
-          />
-        ))}
-      </div>
-    </EmailSection>
   );
 }
 
@@ -622,8 +571,6 @@ function InvestorEmail({ d }: { d: Extract<DigestData, { kind: "investor" }> }) 
         </EmailSection>
       ) : null}
 
-      <ListSection lists={d.lists} />
-
       <EmailSection title="Pitch 报道">
         <ArticleRows articles={d.articles} />
       </EmailSection>
@@ -653,32 +600,6 @@ function GeneralEmail({ d }: { d: Extract<DigestData, { kind: "general" }> }) {
         </EmailSection>
       ) : null}
 
-      {d.needs.length ? (
-        <EmailSection title={d.person.role ? `和${ROLE_LABEL[d.person.role]}相关的“正在寻找”` : "大家正在寻找"} desc="能帮上忙就点进去回应">
-          <div className="flex flex-col">
-            {d.needs.map((n) => (
-              <Row
-                key={n.need.id}
-                href={n.project ? `/p/${n.project.slug}` : `/u/${n.person?.handle}`}
-                left={n.project ? <ProjectLogo text={n.project.logoText} tone={n.project.logoTone} size="sm" /> : <Avatar name={n.person?.name ?? "?"} tone={n.person?.avatarTone ?? 0} size="sm" />}
-                title={n.need.title}
-                desc={n.project?.name ?? n.person?.name}
-              />
-            ))}
-          </div>
-        </EmailSection>
-      ) : null}
-
-      {d.jobs.length ? (
-        <EmailSection title="在招的岗位">
-          <div className="flex flex-col">
-            {d.jobs.map((j) => (
-              <Row key={j.project.id + j.title} href={`/p/${j.project.slug}#jobs`} left={<ProjectLogo text={j.project.logoText} tone={j.project.logoTone} size="sm" />} title={j.title} desc={`${j.project.name} · ${j.type}`} />
-            ))}
-          </div>
-        </EmailSection>
-      ) : null}
-
       <EmailSection title="本周最受关注的项目">
         <div className="flex flex-col">
           {d.hot.map((p) => (
@@ -686,8 +607,6 @@ function GeneralEmail({ d }: { d: Extract<DigestData, { kind: "general" }> }) {
           ))}
         </div>
       </EmailSection>
-
-      <ListSection lists={d.lists} />
 
       <EmailSection title="Pitch 报道">
         <ArticleRows articles={d.articles} />
@@ -711,12 +630,9 @@ const PUSH_TITLE: Partial<Record<Notification["type"], string>> = {
   conversation: "新消息提醒",
   member: "成员邀请提醒",
   officehours: "答疑预约提醒",
-  feedback: "项目建议提醒",
   update: "项目动态提醒",
   demoday: "月度路演提醒",
-  endorsement: "背书提醒",
   reward: "任务奖励提醒",
-  list: "榜单收录提醒",
 };
 
 function TemplateCard({ title, time, fields, remark, onOpen, href, preview }: { title: string; time: string; fields: [string, string][]; remark?: string; onOpen?: () => void; href?: string; preview?: boolean }) {

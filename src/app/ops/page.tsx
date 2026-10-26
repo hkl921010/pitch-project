@@ -1,10 +1,9 @@
 "use client";
 
-import { AlertTriangle, BellRing, Check, Eye, Flame, Handshake, ListPlus, MessageCircle, ShieldCheck, Trophy, X } from "lucide-react";
+import { AlertTriangle, BellRing, Check, Eye, Flame, Handshake, MessageCircle, ShieldCheck, Trophy, X } from "lucide-react";
 import Link from "next/link";
 import { Suspense, useState } from "react";
 
-import { LIST_MAX_ITEMS } from "@/components/biz/list-card";
 import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { Avatar, Badge, Card, EmptyState, PageHeader, ProgressBar, ProjectLogo, Tag } from "@/components/ui/display";
@@ -442,7 +441,6 @@ function heatOf(db: DB, p: Project): Heat {
 
 function HotProjects() {
   const db = useDB();
-  const [listing, setListing] = useState<Project | null>(null);
   const rows = db.projects
     .filter((p) => p.visibility === "public")
     .map((p) => heatOf(db, p))
@@ -452,11 +450,11 @@ function HotProjects() {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-gray-500">按近 14 天收到的意向（投资意向加权）、投资人观察和浏览排序。意向积压的项目提醒一下，值得推荐的收进榜单。</p>
+      <p className="text-sm text-gray-500">按近 14 天收到的意向（投资意向加权）、投资人观察和浏览排序。意向积压的项目可以提醒回应。</p>
       {rows.length ? (
         <div className="flex flex-col gap-3">
           {rows.map((h, i) => (
-            <HotRow key={h.project.id} h={h} rank={i + 1} onList={() => setListing(h.project)} />
+            <HotRow key={h.project.id} h={h} rank={i + 1} />
           ))}
         </div>
       ) : (
@@ -464,12 +462,11 @@ function HotProjects() {
           <EmptyState icon={Flame} title="近 14 天还没有项目收到意向" />
         </Card>
       )}
-      <AddToListModal project={listing} onClose={() => setListing(null)} />
     </div>
   );
 }
 
-function HotRow({ h, rank, onList }: { h: Heat; rank: number; onList: () => void }) {
+function HotRow({ h, rank }: { h: Heat; rank: number }) {
   const nudge = useApp((s) => s.nudgeProject);
   const toast = useApp((s) => s.toast);
   const db = useDB();
@@ -522,9 +519,6 @@ function HotRow({ h, rank, onList }: { h: Heat; rank: number; onList: () => void
               {nudgedToday ? "今天已提醒" : "提醒回应"}
             </Button>
           ) : null}
-          <Button size="sm" variant="secondary" iconLeft={ListPlus} disabled={p.wall !== "approved"} onClick={onList}>
-            收进榜单
-          </Button>
           <Button size="sm" variant="tertiary" iconLeft={Eye} href={`/p/${p.slug}`}>
             看项目
           </Button>
@@ -541,83 +535,6 @@ function Metric({ label, value, hint }: { label: string; value: React.ReactNode;
       <dd className="mt-0.5 text-lg font-semibold text-gray-900 tabular-nums">{value}</dd>
       {hint ? <dd className="truncate text-xs text-gray-500">{hint}</dd> : null}
     </div>
-  );
-}
-
-function AddToListModal({ project, onClose }: { project: Project | null; onClose: () => void }) {
-  const db = useDB();
-  const viewer = useViewer();
-  const curate = useApp((s) => s.curateList);
-  const toast = useApp((s) => s.toast);
-  const [listId, setListId] = useState<string | null>(null);
-  const [note, setNote] = useState("");
-  const [tried, setTried] = useState(false);
-  const lists = project ? db.lists.filter((l) => l.kind === "project" && l.curatorId === viewer?.id && !l.items.some((i) => i.targetId === project.id) && l.items.length < LIST_MAX_ITEMS) : [];
-  const err = !listId ? "选一个榜单" : !note.trim() ? "写一句收录理由" : note.length > 40 ? "最多 40 字" : undefined;
-  const close = () => {
-    setListId(null);
-    setNote("");
-    setTried(false);
-    onClose();
-  };
-  return (
-    <Modal
-      open={!!project}
-      onClose={close}
-      title={`把${project?.name ?? ""}收进榜单`}
-      desc="项目负责人和关注榜单的人会收到通知。"
-      footer={
-        lists.length ? (
-          <>
-            <Button onClick={close}>取消</Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setTried(true);
-                if (err || !project || !listId) return;
-                curate(listId, { add: { targetId: project.id, note: note.trim() } });
-                toast({ tone: "success", title: "已收录", body: "已通知项目负责人和关注榜单的人" });
-                close();
-              }}
-            >
-              收录
-            </Button>
-          </>
-        ) : undefined
-      }
-    >
-      {lists.length ? (
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            {lists.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                aria-pressed={listId === l.id}
-                onClick={() => setListId(l.id)}
-                className={cn("flex items-center justify-between gap-3 rounded-lg border p-3 text-left", listId === l.id ? "border-brand-600 shadow-[0_0_0_1px_var(--color-brand-600)]" : "border-gray-200 hover:border-gray-300")}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-gray-900">{l.title}</span>
-                  <span className="block text-xs text-gray-500">
-                    {l.items.length} 个 · {l.followers.length} 人关注{l.featured ? " · 运营精选" : ""}
-                  </span>
-                </span>
-                {listId === l.id ? <Check size={16} className="shrink-0 text-brand-600" /> : null}
-              </button>
-            ))}
-          </div>
-          <Input label="收录理由" required value={note} onChange={(e) => setNote(e.target.value)} maxCount={40} placeholder="例如：14 天收到 3 条投资意向，单店模型扎实" error={tried ? err : undefined} />
-        </div>
-      ) : (
-        <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-gray-600">你策展的项目榜单都已收录它或已满 {LIST_MAX_ITEMS} 条。新建一个榜单再收录吧。</p>
-          <Button size="sm" variant="primary" href="/lists?create=1">
-            新建榜单
-          </Button>
-        </div>
-      )}
-    </Modal>
   );
 }
 

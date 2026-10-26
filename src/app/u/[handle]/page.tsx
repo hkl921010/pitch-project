@@ -5,7 +5,6 @@ import {
   Award,
   CalendarClock,
   Handshake,
-  LifeBuoy,
   Lock,
   MapPin,
   MessageCircle,
@@ -14,26 +13,21 @@ import {
   Radio,
   Share2,
   Sparkles,
-  Trash2,
   UserPlus,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Suspense, useState, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
-import { EndorsementBlock } from "@/components/biz/endorse";
 import { FollowButton } from "@/components/biz/follow-button";
-import { CuratedBy, ListedIn } from "@/components/biz/list-card";
-import { NEED_ICON, NEED_TONE, needLabel } from "@/components/biz/looking-for";
 import { activeBookingWith, canHost, HostSlots, openSlotsOf } from "@/components/biz/office-hours";
-import { roleTone, SoftVerify } from "@/components/biz/person-card";
-import { AddNeedModal, OpenStatusDrawer, ProfileDrawer } from "@/components/biz/profile-editors";
+import { roleTone } from "@/components/biz/person-card";
+import { OpenStatusDrawer, ProfileDrawer } from "@/components/biz/profile-editors";
 import { KnownSignal, ProjectRow } from "@/components/biz/project-card";
 import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { Avatar, Badge, Card, Cover, EmptyState, Tag } from "@/components/ui/display";
-import { ConfirmModal } from "@/components/ui/overlay";
 import { daysSince, formatDate, relativeTime } from "@/data/time";
 import type { Person } from "@/data/types";
 import { cn } from "@/lib/cn";
@@ -42,10 +36,8 @@ import { useQueryParam } from "@/lib/use-query";
 import { useApp } from "@/store/app-store";
 import {
   badgeDefs,
-  endorsementsFor,
   followerCount,
   getPersonByHandle,
-  investorEndorsers,
   personBadges,
   projectsOf,
   roleText,
@@ -71,10 +63,7 @@ function Profile() {
   const openIntent = useApp((s) => s.openIntent);
   const requireLogin = useApp((s) => s.requireLogin);
   const toast = useApp((s) => s.toast);
-  const removeNeed = useApp((s) => s.removePersonNeed);
   const [edit, setEdit] = useQueryParam<"" | "status" | "profile">("edit", "");
-  const [addNeed, setAddNeed] = useState(false);
-  const [removing, setRemoving] = useState<string | null>(null);
   useHashScroll([handle]);
   const person = getPersonByHandle(db, decodeURIComponent(handle).replace(/^@/, ""));
 
@@ -88,8 +77,6 @@ function Profile() {
 
   const self = viewer?.id === person.id;
   const projects = projectsOf(db, person.id);
-  const endorsers = new Set(endorsementsFor(db, "person", person.id).map((e) => e.fromId)).size;
-  const investors = investorEndorsers(db, person.id);
   const badges = badgeDefs(personBadges(db, person));
   const followers = followerCount(db, "person", person.id);
   const openSlots = openSlotsOf(db, person.id).length;
@@ -146,7 +133,7 @@ function Profile() {
         <Cover tone={person.avatarTone} className="h-24 sm:h-36" />
         <div className="px-5 pb-6 sm:px-8">
           <div className="-mt-10 flex flex-col gap-4 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
-            <Avatar name={person.name} tone={person.avatarTone} size="3xl" verified={investors > 0} className="self-start rounded-full ring-4 ring-white" />
+            <Avatar name={person.name} tone={person.avatarTone} size="3xl" className="self-start rounded-full ring-4 ring-white" />
             <div className="min-w-0 sm:hidden">
               <ProfileName person={person} />
             </div>
@@ -167,12 +154,8 @@ function Profile() {
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600">
-            <SoftVerify personId={person.id} className="text-sm" />
             <span>
               <b className="text-gray-900">{followers}</b> 关注者
-            </span>
-            <span>
-              <b className="text-gray-900">{endorsers}</b> 人背书
             </span>
             {projects.length ? (
               <span>
@@ -200,54 +183,6 @@ function Profile() {
               }
             >
               <OpenStatusBody person={person} stale={stale} self={self} onOffer={(offerId) => act(() => openIntent({ type: "person", personId: person.id, presetKind: "partner", offerId }))} />
-            </Section>
-          ) : null}
-
-          {person.lookingFor.length || self ? (
-            <Section
-              title="正在寻找"
-              desc={self ? "会同步到发现页“需求”，能帮上忙的人可以直接回应" : "能帮上忙的话，直接回应 TA"}
-              action={
-                self && person.lookingFor.length < 3 ? (
-                  <Button size="sm" variant="secondary" iconLeft={Plus} onClick={() => setAddNeed(true)}>
-                    添加
-                  </Button>
-                ) : null
-              }
-            >
-              {person.lookingFor.length ? (
-                <ul className="flex flex-col gap-3">
-                  {person.lookingFor.map((n) => {
-                    const Icon = NEED_ICON[n.kind];
-                    const mine = viewer && db.intents.some((i) => i.fromId === viewer.id && i.needId === n.id && i.status !== "withdrawn");
-                    return (
-                      <li key={n.id} className="flex flex-col gap-3 rounded-xl border border-gray-200 p-4 sm:flex-row sm:items-center">
-                        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border", NEED_TONE[n.kind])}>
-                          <Icon size={18} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-gray-500">
-                            {needLabel(n)} · {relativeTime(n.createdAt)}
-                          </p>
-                          <p className="font-semibold text-gray-900">{n.title}</p>
-                          {n.detail ? <p className="text-sm text-gray-600">{n.detail}</p> : null}
-                        </div>
-                        {self ? (
-                          <Button size="sm" variant="tertiary" iconOnly={Trash2} aria-label="删除" onClick={() => setRemoving(n.id)} />
-                        ) : mine ? (
-                          <Badge tone="brand">已回应</Badge>
-                        ) : (
-                          <Button size="sm" variant="secondary" iconLeft={LifeBuoy} onClick={() => act(() => openIntent({ type: "need", needId: n.id, personId: person.id }))}>
-                            我能帮上忙
-                          </Button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <EmptyState compact icon={LifeBuoy} title="写下你正在寻找的" desc="想认识什么样的人、在找什么工具——能帮上忙的人会直接回应你" action={<Button size="sm" variant="primary" onClick={() => setAddNeed(true)}>添加一条</Button>} />
-              )}
             </Section>
           ) : null}
 
@@ -298,9 +233,6 @@ function Profile() {
             </Section>
           ) : null}
 
-          <Section id="endorse" title="背书" desc="署名、按维度计数，只有正向信号">
-            <EndorsementBlock targetType="person" targetId={person.id} targetName={person.name} canEndorse={!self && !person.isOps} />
-          </Section>
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">
@@ -340,7 +272,7 @@ function Profile() {
             ) : (
               <p className="flex items-center gap-2 text-sm text-gray-500">
                 <Award size={16} className="text-gray-400" />
-                {self ? "完成贡献任务、获得背书都会解锁徽章" : "还没有徽章"}
+                {self ? "完成贡献任务会解锁徽章" : "还没有徽章"}
               </p>
             )}
             {self ? (
@@ -349,9 +281,6 @@ function Profile() {
               </Button>
             ) : null}
           </Card>
-
-          <ListedIn targetId={person.id} />
-          <CuratedBy personId={person.id} self={self} />
 
           <Card>
             <h2 className="mb-2 text-base font-semibold text-gray-900">联系方式</h2>
@@ -381,19 +310,6 @@ function Profile() {
         <>
           <OpenStatusDrawer person={person} open={edit === "status"} onClose={() => setEdit("")} />
           <ProfileDrawer person={person} open={edit === "profile"} onClose={() => setEdit("")} />
-          <AddNeedModal open={addNeed} onClose={() => setAddNeed(false)} />
-          <ConfirmModal
-            open={!!removing}
-            onClose={() => setRemoving(null)}
-            danger
-            title="删除这条需求？"
-            desc="已经收到的回应不受影响。"
-            confirmText="删除"
-            onConfirm={() => {
-              if (removing) removeNeed(removing);
-              toast({ tone: "info", title: "已删除" });
-            }}
-          />
         </>
       ) : null}
     </Page>

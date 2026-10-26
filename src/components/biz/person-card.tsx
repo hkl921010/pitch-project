@@ -1,6 +1,5 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { Avatar, Badge, ProjectLogo } from "@/components/ui/display";
@@ -8,26 +7,13 @@ import { ROLE_LABEL } from "@/data/constants";
 import type { Person } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useApp } from "@/store/app-store";
-import { investorEndorsers, projectsOf, roleText, useDB } from "@/store/selectors";
+import { projectsOf, roleText, useDB } from "@/store/selectors";
 import { FollowButton } from "./follow-button";
-import { LookingForChips } from "./looking-for";
 import { KnownSignal } from "./project-card";
 
 export function roleTone(p: Person): "brand" | "success" | "blue" | "warning" | "gray" {
   if (p.isOps) return "gray";
   return p.role === "founder" ? "brand" : p.role === "investor" ? "success" : p.role === "talent" ? "blue" : p.role === "partner" ? "warning" : "gray";
-}
-
-/** “被 N 位投资人背书”：身份自选不做认证，用这个做软认证。 */
-export function SoftVerify({ personId, className }: { personId: string; className?: string }) {
-  const db = useDB();
-  const n = investorEndorsers(db, personId);
-  if (!n) return null;
-  return (
-    <span className={cn("inline-flex items-center gap-1 text-xs font-medium text-brand-700", className)}>
-      <ShieldCheck size={14} />被 {n} 位投资人背书
-    </span>
-  );
 }
 
 /** 开放状态一句话，例如“开放：天使轮 · 出海消费”。 */
@@ -48,7 +34,7 @@ export function PersonCard({ person: p, className }: { person: Person; className
   return (
     <Link href={`/u/${p.handle}`} className={cn("group flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-xs transition-all hover:border-gray-300 hover:shadow-md", className)}>
       <div className="flex items-start gap-3">
-        <Avatar name={p.name} tone={p.avatarTone} size="lg" verified={investorEndorsers(db, p.id) > 0} />
+        <Avatar name={p.name} tone={p.avatarTone} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-base font-semibold text-gray-900 group-hover:text-brand-700">{p.name}</h3>
@@ -59,13 +45,7 @@ export function PersonCard({ person: p, className }: { person: Person; className
         {p.id !== viewerId ? <FollowButton targetType="person" targetId={p.id} size="xs" /> : null}
       </div>
       <OpenStatusLine person={p} className="mt-3" />
-      {p.lookingFor.length ? (
-        <div className="mt-3">
-          <LookingForChips needs={p.lookingFor} max={2} />
-        </div>
-      ) : null}
       <div className="mt-auto flex flex-col gap-3 pt-4">
-        <SoftVerify personId={p.id} />
         <KnownSignal targetType="person" targetId={p.id} />
         {projects.length ? (
           <div className="flex items-center gap-2 border-t border-gray-100 pt-3">

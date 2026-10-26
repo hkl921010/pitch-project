@@ -27,7 +27,7 @@ import type { OfficeHourSlot, Person } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useQueryParam } from "@/lib/use-query";
 import { useApp } from "@/store/app-store";
-import { endorsementsFor, getPerson, projectsOf, roleText, useDB, useViewer } from "@/store/selectors";
+import { getPerson, projectsOf, roleText, useDB, useViewer } from "@/store/selectors";
 
 type Tab = "browse" | "booked" | "hosting";
 
@@ -207,9 +207,7 @@ function Browse() {
 }
 
 function HostCard({ person, count }: { person: Person; count: number }) {
-  const db = useDB();
   const focus = person.openStatus.investor?.tracks ?? person.openStatus.offers?.map((o) => o.title) ?? [];
-  const endorsed = endorsementsFor(db, "person", person.id).length;
   return (
     <Card className="flex flex-col gap-4">
       <Link href={`/u/${person.handle}#office-hours`} className="group flex items-start gap-3">
@@ -222,7 +220,6 @@ function HostCard({ person, count }: { person: Person; count: number }) {
               <MapPin size={12} />
               {person.city}
             </span>
-            {endorsed ? <span>{endorsed} 条背书</span> : null}
             <span>{count} 个可约时段</span>
           </span>
         </span>

@@ -39,7 +39,6 @@ const NAV = [
   { href: "/feed", label: "信息流", match: (p: string) => p.startsWith("/feed") },
   { href: "/events", label: "活动", match: (p: string) => p.startsWith("/events") },
   { href: "/demo-day", label: "月度路演", match: (p: string) => p.startsWith("/demo-day") },
-  { href: "/lists", label: "榜单", match: (p: string) => p.startsWith("/lists") },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -122,7 +121,7 @@ function TopNav() {
               <UserMenu />
             </>
           ) : (
-            <Button variant="primary" size="sm" iconLeft={LogIn} onClick={() => requireLogin("登录后可以关注项目、表达意向、写背书")}>
+            <Button variant="primary" size="sm" iconLeft={LogIn} onClick={() => requireLogin("登录后可以关注项目、表达意向")}>
               登录
             </Button>
           )}
@@ -325,7 +324,7 @@ function LoginPrompt() {
   const toast = useApp((s) => s.toast);
   const router = useRouter();
   return (
-    <Modal open={open} onClose={close} size="sm" title={reason || "登录 Pitch"} desc="浏览不需要登录；关注、表达意向、背书和创建项目需要一个身份。">
+    <Modal open={open} onClose={close} size="sm" title={reason || "登录 Pitch"} desc="浏览不需要登录；关注、表达意向和创建项目需要一个身份。">
       <div className="flex flex-col gap-2">
         <Button
           variant="primary"

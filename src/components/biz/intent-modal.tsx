@@ -1,18 +1,18 @@
 "use client";
 
-import { AlertCircle, Banknote, CheckCircle2, EyeOff, Gift, Handshake, HelpCircle, LifeBuoy, ShieldCheck, UserPlus } from "lucide-react";
+import { AlertCircle, Banknote, CheckCircle2, EyeOff, Gift, Handshake, HelpCircle, LifeBuoy, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, Badge, ProjectLogo } from "@/components/ui/display";
-import { ChipSelect, RadioCards, Select, Textarea, Toggle } from "@/components/ui/form";
+import { ChipSelect, RadioCards, Textarea, Toggle } from "@/components/ui/form";
 import { Modal } from "@/components/ui/overlay";
 import { INTENT_KIND_LABEL, PARTNER_SUBS } from "@/data/constants";
 import type { IntentKind } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useApp } from "@/store/app-store";
-import { anonymousProfile, getPerson, getProject, investorEndorsers, responseLabel, roleText, useDB, useQuota, useViewer } from "@/store/selectors";
+import { anonymousProfile, getPerson, getProject, responseLabel, roleText, useDB, useQuota, useViewer } from "@/store/selectors";
 
 const TEMPLATES: Record<IntentKind, string[]> = {
   invest: ["我们在看{track}方向的早期项目，想了解一下融资节奏和资金用途。", "看了你们的单店数据，想约 20 分钟聊聊后续扩张计划。"],
@@ -52,7 +52,7 @@ export function IntentModal() {
     if (target.type === "person") {
       const p = getPerson(useApp.getState().db, target.personId);
       setKind(target.presetKind ?? (p?.role === "talent" ? "join" : p?.role === "partner" ? "partner" : "other"));
-    } else setKind(target.type === "need" ? "help" : (target.presetKind ?? "partner"));
+    } else setKind(target.presetKind ?? "partner");
     setJobId(target.type === "project" ? (target.jobId ?? "") : "");
     setSub([]);
     setMessage(target.prefill ?? "");
@@ -65,7 +65,7 @@ export function IntentModal() {
   if (!target || !viewer) return null;
   const project = target.type === "project" ? getProject(db, target.projectId) : undefined;
   const person = target.type !== "project" ? getPerson(db, target.personId) : project ? getPerson(db, project.ownerId) : undefined;
-  const need = target.type === "need" ? person?.lookingFor.find((n) => n.id === target.needId) : target.type === "project" ? project?.lookingFor.find((n) => n.id === target.needId) : undefined;
+  const need = target.type === "project" ? project?.lookingFor.find((n) => n.id === target.needId) : undefined;
   const offer = target.type === "person" && target.offerId ? person?.openStatus.offers?.find((o) => o.id === target.offerId) : undefined;
   const direct = target.type === "person";
   const myProject = db.projects.find((p) => p.ownerId === viewer.id);
@@ -118,10 +118,7 @@ export function IntentModal() {
     );
   }
 
-  const kindOptions =
-    target.type === "need"
-      ? [{ value: "help" as IntentKind, title: "我能帮上忙", desc: "回应TA正在寻找的", icon: LifeBuoy }]
-      : direct
+  const kindOptions = direct
         ? [
             { value: "partner" as IntentKind, title: "想合作", desc: offer ? `想要：${offer.title}` : "渠道、流量、品牌、服务", icon: Handshake },
             { value: "join" as IntentKind, title: "邀请 TA 加入", desc: "合伙、全职或顾问，在说明里介绍你的项目", icon: UserPlus },
@@ -129,8 +126,7 @@ export function IntentModal() {
           ]
         : [
           { value: "invest" as IntentKind, title: "想投资", desc: "对方会看到你的投资偏好", icon: Banknote },
-          { value: "partner" as IntentKind, title: "想合作", desc: "渠道、流量、品牌、服务", icon: Handshake },
-          { value: "join" as IntentKind, title: "想加入团队", desc: project?.jobs.length ? `可选具体岗位（${project.jobs.length} 个在招）` : "全职、合伙或顾问", icon: UserPlus },
+          { value: "partner" as IntentKind, title: "想合作", desc: "供应链、渠道，或按对方写的方式合作", icon: Handshake },
           { value: "other" as IntentKind, title: "其他", desc: "交个朋友、请教问题", icon: HelpCircle },
         ];
 
@@ -170,7 +166,7 @@ export function IntentModal() {
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
             <div className="flex-1">
               <p className="font-semibold">本月意向次数已用完</p>
-              <p className="mt-0.5">完成贡献任务（写建议、背书、投票等）每项 +1 次，或开通会员不限次数。</p>
+              <p className="mt-0.5">完成贡献任务（路演投票、发布动态等）每项 +1 次，或开通会员不限次数。</p>
             </div>
             <Button size="xs" variant="secondary" iconLeft={Gift} href="/rewards" onClick={close}>
               去做任务
@@ -180,22 +176,14 @@ export function IntentModal() {
 
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-gray-700">你想</span>
-          <RadioCards<IntentKind> value={kind} onChange={setKind} columns={target.type === "need" ? 1 : direct ? 3 : 2} options={kindOptions} />
+          <RadioCards<IntentKind> value={kind} onChange={setKind} columns={direct ? 3 : 2} options={kindOptions} />
         </div>
 
-        {kind === "partner" && !offer ? (
+        {kind === "partner" && !offer && !need ? (
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-gray-700">合作方向</span>
             <ChipSelect options={PARTNER_SUBS} value={sub} onChange={setSub} size="sm" />
           </div>
-        ) : null}
-        {kind === "join" && project?.jobs.length ? (
-          <Select
-            label="想加入的岗位"
-            value={jobId}
-            onChange={(e) => setJobId(e.target.value)}
-            options={[{ value: "", label: "不指定岗位" }, ...project.jobs.map((j) => ({ value: j.id, label: `${j.title} · ${j.type}` }))]}
-          />
         ) : null}
 
         <div className="flex flex-col gap-2">
@@ -246,11 +234,6 @@ export function IntentModal() {
                       {roleText(viewer)}
                       {viewer.org ? ` · ${viewer.org}` : ""}
                     </p>
-                    {investorEndorsers(db, viewer.id) ? (
-                      <p className="mt-0.5 flex items-center gap-1 text-xs text-brand-700">
-                        <ShieldCheck size={12} />被 {investorEndorsers(db, viewer.id)} 位投资人背书
-                      </p>
-                    ) : null}
                   </>
                 )}
               </div>

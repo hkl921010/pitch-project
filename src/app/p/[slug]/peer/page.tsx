@@ -72,12 +72,12 @@ function PeerView({ embed = false }: { embed?: boolean }) {
   const canEdit = canEditProject(p, viewer?.id ?? null);
   const manage = canManageProject(p, viewer?.id ?? null);
   const team = p.team.filter((t) => t.status === "confirmed" || manage);
-  const needs = p.lookingFor.filter((n) => n.coop || n.service);
+  const cooperations = p.lookingFor.filter((n) => n.coop);
+  const services = p.lookingFor.filter((n) => n.service);
   const images = p.gallery.filter((g) => g.image);
   const badges = badgeDefs(p.badges);
   const comp = projectCompletion(p);
   const followers = followerCount(db, "project", p.id);
-  const first = needs.find((n) => n.coop) ?? needs[0];
 
   const onUpvote = () => {
     if (isMember) return;
@@ -136,7 +136,14 @@ function PeerView({ embed = false }: { embed?: boolean }) {
 
       <div className="my-5 h-px bg-[#e2e8f0]" />
 
-      <section>
+      <OfferBlocks
+        cooperations={cooperations}
+        services={services}
+        isMember={isMember}
+        onPick={(need) => openIntent({ type: "project", projectId: p.id, presetKind: (need.kind === "help" ? "partner" : need.kind) as IntentKind, needId: need.id })}
+      />
+
+      <section className="mt-6">
         <h2 className="text-sm font-semibold">关于</h2>
         <div className="mt-2 space-y-3 text-[15px] leading-7">
           {p.intro ? <p className="whitespace-pre-line">{p.intro}</p> : <p className="text-[#94a3b8]">还没写简介</p>}
@@ -185,22 +192,6 @@ function PeerView({ embed = false }: { embed?: boolean }) {
         </div>
       </section>
 
-      {needs.length ? (
-        <section className="mt-6">
-          <h2 className="text-sm font-semibold">合作</h2>
-          <div className="mt-1">
-            {needs.map((need) => (
-              <NeedRow
-                key={need.id}
-                need={need}
-                action={isMember ? undefined : "我想合作"}
-                onAction={() => openIntent({ type: "project", projectId: p.id, presetKind: (need.kind === "help" ? "partner" : need.kind) as IntentKind, needId: need.id })}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       {team.length ? (
         <section className="mt-6">
           <h2 className="text-sm font-semibold">团队</h2>
@@ -222,15 +213,6 @@ function PeerView({ embed = false }: { embed?: boolean }) {
         </section>
       ) : null}
 
-      {first && !isMember ? (
-        <button
-          type="button"
-          className="mt-8 flex h-10 w-full items-center justify-center rounded-xl border border-[#1e874b] bg-[#00aa45] text-sm font-semibold text-white"
-          onClick={() => openIntent({ type: "project", projectId: p.id, presetKind: (first.kind === "help" ? "partner" : first.kind) as IntentKind, needId: first.id })}
-        >
-          我想合作
-        </button>
-      ) : null}
     </div>
   );
 
@@ -304,6 +286,41 @@ function More({ text }: { text: string }) {
   );
 }
 
+function OfferBlocks({
+  cooperations,
+  services,
+  isMember,
+  onPick,
+}: {
+  cooperations: NeedItem[];
+  services: NeedItem[];
+  isMember: boolean;
+  onPick: (need: NeedItem) => void;
+}) {
+  if (!cooperations.length && !services.length) return null;
+  return (
+    <div className="flex flex-col gap-5">
+      <OfferGroup title="合作" hint="找供应链、渠道或融资。每条都能直接发起。" items={cooperations} isMember={isMember} onPick={onPick} />
+      <OfferGroup title="服务" hint="对方自己花钱买的。朋友、新媒体、招人，或其他。" items={services} isMember={isMember} onPick={onPick} />
+    </div>
+  );
+}
+
+function OfferGroup({ title, hint, items, isMember, onPick }: { title: string; hint: string; items: NeedItem[]; isMember: boolean; onPick: (need: NeedItem) => void }) {
+  if (!items.length) return null;
+  return (
+    <section>
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <p className="mt-0.5 text-xs text-[#64748b]">{hint}</p>
+      <div className="mt-2 flex flex-col gap-2">
+        {items.map((need) => (
+          <NeedRow key={need.id} need={need} action={isMember ? undefined : "我想合作"} onAction={() => onPick(need)} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function NeedRow({ need: n, action, onAction }: { need: NeedItem; action?: string; onAction: () => void }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -315,24 +332,28 @@ function NeedRow({ need: n, action, onAction }: { need: NeedItem; action?: strin
     return () => window.removeEventListener("hashchange", sync);
   }, [n.id]);
   return (
-    <div id={`need-${n.id}`} className="scroll-mt-24 border-b border-[#e2e8f0] py-3 last:border-b-0">
-      <button type="button" className="flex w-full items-start gap-3 text-left" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold">{n.title}</span>
-          <span className="mt-0.5 block text-xs text-[#64748b]">{needLabel(n)}{n.summary ? ` · ${n.summary}` : ""}</span>
-        </span>
-        <ChevronDown size={16} className={cn("mt-1 shrink-0 text-[#94a3b8] transition-transform", open && "rotate-180")} />
+    <div id={`need-${n.id}`} className="scroll-mt-24 rounded-xl border border-[#e2e8f0] p-3">
+      <div className="flex items-start gap-3">
+        <button type="button" className="min-w-0 flex-1 text-left" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          <span className="block text-xs text-[#64748b]">{needLabel(n)}</span>
+          <span className="mt-0.5 block text-sm font-semibold">{n.title}</span>
+          {n.summary ? <span className="mt-1 block text-sm leading-5 text-[#334155]">{n.summary}</span> : null}
+        </button>
+        {action ? (
+          <button type="button" className="shrink-0 rounded-lg border border-[#1e874b] bg-[#00aa45] px-3 py-1.5 text-xs font-semibold text-white" onClick={onAction}>
+            {action}
+          </button>
+        ) : null}
+      </div>
+      <button type="button" className="mt-2 inline-flex items-center gap-1 text-xs text-[#64748b]" onClick={() => setOpen((v) => !v)}>
+        {open ? "收起条件" : "看条件"}
+        <ChevronDown size={14} className={cn("transition-transform", open && "rotate-180")} />
       </button>
       {open ? (
-        <div className="mt-3 space-y-2 text-sm leading-6 text-[#334155]">
+        <div className="mt-2 space-y-2 border-t border-[#e2e8f0] pt-2 text-sm leading-6 text-[#334155]">
           {n.detail ? <p className="whitespace-pre-line">{n.detail}</p> : null}
           {n.terms ? <p className="whitespace-pre-line">{n.terms}</p> : null}
           {n.story ? <p className="whitespace-pre-line text-[#64748b]">{n.story}</p> : null}
-          {action ? (
-            <button type="button" className="pt-1 text-sm font-semibold text-[#00aa45]" onClick={onAction}>
-              {action}
-            </button>
-          ) : null}
         </div>
       ) : null}
     </div>

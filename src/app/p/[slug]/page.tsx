@@ -6,9 +6,12 @@ import { notFound, useParams, usePathname, useRouter, useSearchParams } from "ne
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { FollowButton } from "@/components/biz/follow-button";
+import { ProjectAirbnbDetail } from "@/app/p/[slug]/airbnb/page";
+import { ProjectLumaDetail } from "@/app/p/[slug]/luma/page";
 import { ProjectMiniDetail } from "@/app/p/[slug]/mini/page";
 import { ProjectPeerDetail } from "@/app/p/[slug]/peer/page";
 import { ProjectPlainDetail } from "@/app/p/[slug]/plain/page";
+import { ProjectReadDetail } from "@/app/p/[slug]/read/page";
 import { IntentBar, IntentCard } from "@/components/biz/intent-card";
 import { needIcon, needLabel, needTone, serviceAction } from "@/components/biz/looking-for";
 import { KnownSignal, ProjectRow } from "@/components/biz/project-card";
@@ -25,7 +28,7 @@ import { useApp } from "@/store/app-store";
 import { badgeDefs, canEditProject, canManageProject, followerCount, getPerson, getProjectBySlug, projectCompletion, roleText, useDB, useViewer } from "@/store/selectors";
 
 const SOURCES: TrafficSource[] = ["wechat", "moments", "poster", "discover", "demoday", "article", "direct"];
-const LAYOUTS = ["now", "plain", "mini", "peer"] as const;
+const LAYOUTS = ["now", "plain", "mini", "peer", "luma", "read", "airbnb"] as const;
 type DetailLayout = (typeof LAYOUTS)[number];
 
 export default function ProjectPage() {
@@ -146,6 +149,9 @@ function ProjectView() {
               { value: "plain", label: "简介亮点" },
               { value: "mini", label: "小程序" },
               { value: "peer", label: "Peerlist" },
+              { value: "luma", label: "Luma" },
+              { value: "read", label: "Read.cv" },
+              { value: "airbnb", label: "Airbnb" },
             ]}
           />
         </div>
@@ -277,8 +283,14 @@ function ProjectView() {
           <ProjectPlainDetail />
         ) : layout === "mini" ? (
           <ProjectMiniDetail />
-        ) : (
+        ) : layout === "peer" ? (
           <ProjectPeerDetail />
+        ) : layout === "luma" ? (
+          <ProjectLumaDetail />
+        ) : layout === "read" ? (
+          <ProjectReadDetail />
+        ) : (
+          <ProjectAirbnbDetail />
         )}
       </Page>
       <IntentBar project={p} follow={<FollowButton targetType="project" targetId={p.id} size="md" />} />

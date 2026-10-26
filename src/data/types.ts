@@ -152,7 +152,7 @@ export interface Project {
   intro: string;
   product: string;
   edge: string;
-  /** 寻找合作、寻找服务下面的详细介绍。页头只放短的三段。 */
+  /** 寻找合作前面的长介绍。页头只放短的三段，这里默认收起。 */
   profile?: string;
   website?: string;
   lookingFor: NeedItem[];

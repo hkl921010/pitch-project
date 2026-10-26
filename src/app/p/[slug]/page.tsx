@@ -2,15 +2,18 @@
 
 import { Bookmark, BookmarkCheck, ChevronDown, Eye, Globe, Link2, LayoutDashboard, Lock, MapPin, PenLine, Plus, Share2, Users } from "lucide-react";
 import Link from "next/link";
-import { notFound, useParams, useSearchParams } from "next/navigation";
+import { notFound, useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { FollowButton } from "@/components/biz/follow-button";
+import { ProjectMiniDetail } from "@/app/p/[slug]/mini/page";
+import { ProjectPlainDetail } from "@/app/p/[slug]/plain/page";
 import { IntentBar, IntentCard } from "@/components/biz/intent-card";
 import { needIcon, needLabel, needTone, serviceAction } from "@/components/biz/looking-for";
 import { KnownSignal, ProjectRow } from "@/components/biz/project-card";
 import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/tabs";
 import { Avatar, Badge, Card, EmptyState, ProgressRing, ProjectLogo, Tag, Tooltip } from "@/components/ui/display";
 import { TONES } from "@/data/constants";
 import { formatDate } from "@/data/time";
@@ -21,6 +24,8 @@ import { useApp } from "@/store/app-store";
 import { badgeDefs, canEditProject, canManageProject, followerCount, getPerson, getProjectBySlug, projectCompletion, roleText, useDB, useViewer } from "@/store/selectors";
 
 const SOURCES: TrafficSource[] = ["wechat", "moments", "poster", "discover", "demoday", "article", "direct"];
+const LAYOUTS = ["now", "plain", "mini"] as const;
+type DetailLayout = (typeof LAYOUTS)[number];
 
 export default function ProjectPage() {
   return (
@@ -32,7 +37,18 @@ export default function ProjectPage() {
 
 function ProjectView() {
   const { slug } = useParams<{ slug: string }>();
+  const pathname = usePathname();
+  const router = useRouter();
   const sp = useSearchParams();
+  const layoutParam = sp.get("layout");
+  const layout: DetailLayout = layoutParam === "plain" || layoutParam === "mini" ? layoutParam : "now";
+  const setLayout = (next: DetailLayout) => {
+    const params = new URLSearchParams(sp.toString());
+    if (next === "now") params.delete("layout");
+    else params.set("layout", next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
   const db = useDB();
   const viewer = useViewer();
   const recordView = useApp((s) => s.recordView);
@@ -120,6 +136,19 @@ function ProjectView() {
       ) : null}
 
       <Page className="pb-28 lg:pb-8">
+        <div className="sticky top-16 z-30 -mx-4 mb-6 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-8 sm:px-8">
+          <Segmented<DetailLayout>
+            value={layout}
+            onChange={setLayout}
+            items={[
+              { value: "now", label: "现在这版" },
+              { value: "plain", label: "简介亮点" },
+              { value: "mini", label: "小程序" },
+            ]}
+          />
+        </div>
+        {layout === "now" ? (
+          <>
         <IntroHero
           project={p}
           badges={badges}
@@ -137,33 +166,35 @@ function ProjectView() {
 
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-10">
-            <Section id="looking" title="寻找合作" desc="我想要什么，以及我能付出什么。点开看条件和案例。">
+            <ProjectAbout project={p} />
+
+            <Section id="looking" title="寻找合作" desc="点开看找谁、怎么合作。">
               {cooperations.length ? (
                 <div className="flex flex-col gap-4">
                   {cooperations.map((n) => (
                     <NeedArticle
                       key={n.id}
                       need={n}
-                      payLabel="愿意付出什么"
+                      payLabel="怎么合作"
                       action={isMember ? undefined : coopAction(n)}
                       onAction={() => openIntent({ type: "project", projectId: p.id, presetKind: (n.kind === "help" ? "partner" : n.kind) as IntentKind, needId: n.id })}
                     />
                   ))}
                 </div>
               ) : (
-                <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#looking`} title="还没写寻找合作" cta="写下合作" desc="写清要供应链、渠道还是融资，以及你愿意付出什么" />
+                <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#looking`} title="还没写寻找合作" cta="写下合作" desc="写清要供应链、渠道还是融资，以及怎么合作" />
               )}
             </Section>
 
             {services.length || canEdit ? (
-              <Section id="services" title="寻找服务" desc="自己花钱买的：朋友、新媒体、招人，或其他。">
+              <Section id="services" title="寻找服务" desc="自己花钱买的。点开看要什么、怎么收费。">
                 {services.length ? (
                   <div className="flex flex-col gap-4">
                     {services.map((n) => (
                       <NeedArticle
                         key={n.id}
                         need={n}
-                        payLabel="愿意付多少"
+                        payLabel="怎么收费"
                         action={isMember || !n.service ? undefined : serviceAction(n.service)}
                         onAction={() => openIntent({ type: "project", projectId: p.id, presetKind: "partner", needId: n.id })}
                       />
@@ -175,9 +206,7 @@ function ProjectView() {
               </Section>
             ) : null}
 
-            <ProjectAbout project={p} />
-
-            <Section id="team" title="团队" desc="成员确认后，项目会出现在TA的个人主页上">
+            <Section id="team" title="团队" desc="成员确认后，项目会出现在 TA 的个人主页上">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {team.map((m) => {
                   const person = getPerson(db, m.personId);
@@ -241,6 +270,12 @@ function ProjectView() {
             ) : null}
           </aside>
         </div>
+          </>
+        ) : layout === "plain" ? (
+          <ProjectPlainDetail />
+        ) : (
+          <ProjectMiniDetail />
+        )}
       </Page>
       <IntentBar project={p} follow={<FollowButton targetType="project" targetId={p.id} size="md" />} />
     </>
@@ -266,6 +301,7 @@ function StatsMini({ project: p }: { project: Project }) {
   );
 }
 
+/** 一条合作或服务。收起只看标题和一句话；点开才看找谁、怎么合作。地址带 #need-id 时直接打开。 */
 function NeedArticle({ need: n, payLabel, action, onAction }: { need: NeedItem; payLabel: string; action?: string; onAction: () => void }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -278,38 +314,27 @@ function NeedArticle({ need: n, payLabel, action, onAction }: { need: NeedItem; 
   }, [n.id]);
   const Icon = needIcon(n);
   return (
-    <article id={`need-${n.id}`} className="scroll-mt-24 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
-      <button type="button" className="flex w-full items-start gap-4 p-5 text-left sm:p-6" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border", needTone(n))}>
-          <Icon size={22} />
+    <article id={`need-${n.id}`} className="scroll-mt-24 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <button type="button" className="flex w-full items-center gap-3 px-4 py-4 text-left sm:px-5" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border", needTone(n))}>
+          <Icon size={18} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="text-sm font-medium text-gray-500">{needLabel(n)}</span>
-          <span className="mt-1 block text-xl font-semibold text-gray-900">{n.title}</span>
-          {n.summary ? <span className="mt-2 block text-sm leading-6 text-gray-600">{n.summary}</span> : null}
+          <span className="text-xs text-gray-500">{needLabel(n)}</span>
+          <span className="mt-0.5 block text-base font-semibold text-gray-900">{n.title}</span>
+          {n.summary ? <span className="mt-0.5 block truncate text-sm text-gray-600">{n.summary}</span> : null}
         </span>
-        <ChevronDown size={20} className={cn("mt-1 shrink-0 text-gray-400 transition-transform", open && "rotate-180")} />
+        <ChevronDown size={18} className={cn("shrink-0 text-gray-400 transition-transform", open && "rotate-180")} />
       </button>
       {open ? (
-        <div className="border-t border-gray-100 px-5 pt-5 pb-6 sm:px-6">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900">在找什么</h4>
-              <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{n.detail || "还没有写要找的对象。"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900">{payLabel}</h4>
-              <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{n.terms || "还没有写条件。"}</p>
-            </div>
+        <div className="border-t border-gray-100 px-4 py-4 sm:px-5">
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-gray-100 sm:grid-cols-2">
+            <Fact label="找谁" text={n.detail || "还没写找谁。"} />
+            <Fact label={payLabel} text={n.terms || "还没写。"} />
           </div>
-          {n.story ? (
-            <div className="mt-5 rounded-xl bg-gray-50 p-4">
-              <h4 className="text-sm font-semibold text-gray-900">再看细一点</h4>
-              <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{n.story}</p>
-            </div>
-          ) : null}
+          {n.story ? <p className="mt-3 text-sm leading-6 whitespace-pre-line text-gray-600">{n.story}</p> : null}
           {n.storyImages?.length ? (
-            <div className="mt-4 grid grid-cols-1 gap-3">
+            <div className="mt-3 grid grid-cols-1 gap-3">
               {n.storyImages.map((img) => (
                 <figure key={img.src} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                   <img src={img.src} alt={img.caption} className="w-full" />
@@ -319,7 +344,7 @@ function NeedArticle({ need: n, payLabel, action, onAction }: { need: NeedItem; 
             </div>
           ) : null}
           {action ? (
-            <Button size="sm" variant="primary" className="mt-5" onClick={onAction}>
+            <Button size="sm" variant="primary" className="mt-4" onClick={onAction}>
               {action}
             </Button>
           ) : null}
@@ -329,34 +354,70 @@ function NeedArticle({ need: n, payLabel, action, onAction }: { need: NeedItem; 
   );
 }
 
+function Fact({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="bg-gray-50 px-3.5 py-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="mt-1 text-sm leading-6 whitespace-pre-line text-gray-900">{text}</p>
+    </div>
+  );
+}
+
 function coopAction(n: NeedItem) {
-  if (n.sub === "点位") return "我想了解这笔点位投资";
+  if (n.sub === "点位") return "我想投这个点位";
   if (n.sub === "股权") return "我想聊股权";
-  if (n.coop === "funding") return "我想对接这笔融资";
+  if (n.coop === "funding") return "我想聊这笔融资";
   if (n.coop === "supply") return "我能供货";
   if (n.coop === "channel") return "我有渠道";
   return "我能合作";
 }
 
+/** 项目简介。有长文或图片才出现，放在寻找合作前面。默认收起，点开才看；地址带 #profile 时直接打开。 */
 function ProjectAbout({ project: p }: { project: Project }) {
   const images = p.gallery.filter((g) => g.image);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const sync = () => {
+      if (decodeURIComponent(window.location.hash.slice(1)) === "profile") setOpen(true);
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
   if (!p.profile && !images.length) return null;
+  const preview = (p.profile ?? "").split("\n").map((line) => line.trim()).find(Boolean) ?? "点开看项目图片";
   return (
-    <Section id="profile" title="项目介绍" desc="更完整的业务细节和项目图片。合作条件在上面每条里。">
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-xs sm:p-6">
-        {p.profile ? <p className="text-[15px] leading-7 whitespace-pre-line text-gray-700">{p.profile}</p> : null}
-        {images.length ? (
-          <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", p.profile && "mt-6")}>
-            {images.map((g) => (
-              <figure key={g.id} className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                <img src={g.image} alt={g.caption} className="w-full" />
-                <figcaption className="bg-white px-3 py-2 text-sm text-gray-600">{g.caption}</figcaption>
-              </figure>
+    <section id="profile" className="scroll-mt-24 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <button type="button" className="flex w-full items-center gap-3 px-4 py-4 text-left sm:px-5" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base font-semibold text-gray-900">项目简介</span>
+          {open ? null : <span className="mt-0.5 block truncate text-sm text-gray-500">{preview}</span>}
+        </span>
+        {!open && images.length ? (
+          <span className="hidden shrink-0 items-center gap-1 sm:flex" aria-hidden>
+            {images.slice(0, 3).map((g) => (
+              <img key={g.id} src={g.image} alt="" className="h-10 w-14 rounded-md object-cover" />
             ))}
-          </div>
+          </span>
         ) : null}
-      </div>
-    </Section>
+        <ChevronDown size={18} className={cn("shrink-0 text-gray-400 transition-transform", open && "rotate-180")} />
+      </button>
+      {open ? (
+        <div className="border-t border-gray-100 px-4 py-4 sm:px-5">
+          {p.profile ? <p className="text-sm leading-6 whitespace-pre-line text-gray-800">{p.profile}</p> : null}
+          {images.length ? (
+            <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", p.profile && "mt-4")}>
+              {images.map((g) => (
+                <figure key={g.id} className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                  <img src={g.image} alt={g.caption} className="w-full" />
+                  <figcaption className="bg-white px-3 py-2 text-sm text-gray-600">{g.caption}</figcaption>
+                </figure>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

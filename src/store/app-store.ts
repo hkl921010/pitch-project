@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
-import { CONTRIBUTION_TASKS, CURRENT_MONTH, DEFAULT_INSTANT, DEMO_VOTES, KEY_UPDATE_TEMPLATES, MATCH_STAGE, MONTHLY_FREE_INTENTS, TOP_CONTRIBUTOR_TASKS } from "@/data/constants";
+import { CONTRIBUTION_TASKS, CURRENT_MONTH, DEFAULT_INSTANT, KEY_UPDATE_TEMPLATES, MATCH_STAGE, MONTHLY_FREE_INTENTS, TOP_CONTRIBUTOR_TASKS } from "@/data/constants";
 import { createSeed } from "@/data/seed";
 import { formatDateTime, isSameMonth, monthOf, nowIso, nowMs } from "@/data/time";
 import type {
@@ -107,12 +107,7 @@ interface AppState {
   markWatchSeen: (projectId: string) => void;
   markAllWatchSeen: () => void;
 
-  rsvpEvent: (eventId: string) => void;
   cheerUpdate: (projectId: string, updateId: string) => void;
-  enterEvent: (eventId: string) => void;
-
-  applyDemoDay: (demoDayId: string, projectId: string, pitchNote: string) => void;
-  voteDemoDay: (demoDayId: string, projectId: string) => void;
 
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
@@ -126,7 +121,6 @@ interface AppState {
   cancelSlot: (slotId: string, reason?: string) => void;
 
   reviewWall: (projectId: string, approve: boolean, note?: string) => void;
-  reviewDemoDayEntry: (demoDayId: string, projectId: string, status: "shortlisted" | "rejected", note?: string) => void;
   takeMatch: (convId: string, opsNote: string) => void;
   opsInitiateMatch: (convId: string, note: string) => void;
   updateMatch: (convId: string, stage: MatchStage, note: string) => void;
@@ -136,7 +130,7 @@ interface AppState {
 }
 
 /** 假数据结构或内容变化时递增，旧的本地数据会被替换为新种子。 */
-const SEED_VERSION = 26;
+const SEED_VERSION = 27;
 
 const uid = (prefix: string) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -665,49 +659,6 @@ export const useApp = create<AppState>()(
           const list = u.cheers ?? [];
           u.cheers = list.includes(s.viewerId) ? list.filter((x) => x !== s.viewerId) : [...list, s.viewerId];
         }),
-      rsvpEvent: (eventId) =>
-        set((s) => {
-          const e = s.db.events.find((x) => x.id === eventId);
-          if (!e || !s.viewerId) return;
-          if (e.attendeeIds.includes(s.viewerId)) e.attendeeIds = e.attendeeIds.filter((x) => x !== s.viewerId);
-          else e.attendeeIds.push(s.viewerId);
-        }),
-      enterEvent: (eventId) =>
-        set((s) => {
-          const e = s.db.events.find((x) => x.id === eventId);
-          if (!e || !s.viewerId) return;
-          if (!e.attendeeIds.includes(s.viewerId)) e.attendeeIds.push(s.viewerId);
-          if (!e.presentIds.includes(s.viewerId)) e.presentIds.push(s.viewerId);
-        }),
-
-      applyDemoDay: (demoDayId, projectId, pitchNote) =>
-        set((s) => {
-          const dd = s.db.demoDays.find((d) => d.id === demoDayId);
-          if (!dd || dd.entries.some((e) => e.projectId === projectId)) return;
-          dd.entries.push({ projectId, status: "applied", appliedAt: nowIso(), pitchNote });
-          const p = s.db.projects.find((x) => x.id === projectId);
-          pushNotification(s.db, { userId: "u-ake", type: "demoday", title: `${p?.name}报名了${dd.title}`, body: pitchNote, link: "/ops?tab=review" });
-        }),
-      voteDemoDay: (demoDayId, projectId) =>
-        set((s) => {
-          const dd = s.db.demoDays.find((d) => d.id === demoDayId);
-          const viewerId = s.viewerId;
-          if (!dd || !viewerId || dd.status !== "open") return;
-          const ev = s.db.events.find((e) => e.id === dd.eventId);
-          if (ev && nowMs() > new Date(ev.end).getTime()) return;
-          const p = s.db.projects.find((x) => x.id === projectId);
-          if (!p || p.team.some((m) => m.personId === viewerId)) return;
-          if (!dd.entries.some((e) => e.projectId === projectId && e.status === "shortlisted")) return;
-          const list = (dd.votes[projectId] ??= []);
-          if (list.includes(viewerId)) {
-            dd.votes[projectId] = list.filter((x) => x !== viewerId);
-          } else {
-            const used = Object.values(dd.votes).filter((v) => v.includes(viewerId)).length;
-            if (used >= DEMO_VOTES) return;
-            list.push(viewerId);
-            recordContribution(s.db, viewerId, "vote", `在${dd.title}为${p.name}投票`);
-          }
-        }),
 
       markNotificationRead: (id) =>
         set((s) => {
@@ -830,24 +781,6 @@ export const useApp = create<AppState>()(
             body: approve ? "现在所有人都能在发现页看到你的项目" : note || "完善资料后可以重新申请；公开页不受影响",
             link: `/dashboard/${p.slug}?tab=exposure`,
           });
-        }),
-      reviewDemoDayEntry: (demoDayId, projectId, status, note) =>
-        set((s) => {
-          const dd = s.db.demoDays.find((d) => d.id === demoDayId);
-          const e = dd?.entries.find((x) => x.projectId === projectId);
-          if (!dd || !e) return;
-          e.status = status;
-          e.opsNote = note;
-          const p = s.db.projects.find((x) => x.id === projectId);
-          if (p && status === "shortlisted" && !p.badges.includes("demoday_shortlist")) p.badges.push("demoday_shortlist");
-          if (p)
-            pushNotification(s.db, {
-              userId: p.ownerId,
-              type: "demoday",
-              title: status === "shortlisted" ? `${p.name}入围${dd.title}` : `${p.name}本月未入围`,
-              body: status === "shortlisted" ? "投票已开放，分享给朋友为你投票吧" : note || "下个月可以再报名",
-              link: "/demo-day",
-            });
         }),
       takeMatch: (convId, opsNote) =>
         set((s) => {

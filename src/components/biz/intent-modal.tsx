@@ -166,7 +166,7 @@ export function IntentModal() {
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
             <div className="flex-1">
               <p className="font-semibold">本月意向次数已用完</p>
-              <p className="mt-0.5">完成贡献任务（路演投票、发布动态等）每项 +1 次，或开通会员不限次数。</p>
+              <p className="mt-0.5">完成贡献任务（发布动态、刷新开放状态）每项 +1 次，或开通会员不限次数。</p>
             </div>
             <Button size="xs" variant="secondary" iconLeft={Gift} href="/rewards" onClick={close}>
               去做任务

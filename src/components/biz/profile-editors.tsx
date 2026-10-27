@@ -91,7 +91,7 @@ export function OpenStatusDrawer({ person, open, onClose }: { person: Person; op
             <Field label="关注地区">
               <ChipSelect multiple size="sm" options={REGIONS} value={inv.regions} onChange={(v) => setDraft({ ...draft, investor: { ...inv, regions: v } })} />
             </Field>
-            <p className="rounded-lg bg-gray-50 p-3 text-xs text-gray-500">匹配的项目会优先出现在你的首页和周报里。</p>
+            <p className="rounded-lg bg-gray-50 p-3 text-xs text-gray-500">匹配的项目会优先出现在你的「我的」和周报里。</p>
           </>
         ) : null}
 

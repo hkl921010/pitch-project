@@ -5,8 +5,8 @@ import { ClientGate } from "@/components/shell/client-gate";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pitch · 项目原型",
-  description: "创始人公开主页 + 统一意向 + 站内对话 + 路演节律",
+  title: "培驰商学 · Pitch",
+  description: "培驰商学是专业的资本辅导与资源对接平台。读懂资本，反向经营。",
 };
 
 export const viewport: Viewport = {

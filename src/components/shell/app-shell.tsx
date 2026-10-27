@@ -34,22 +34,21 @@ import { GlobalHosts } from "./global-hosts";
 import { PersonaSwitcher } from "./persona-switcher";
 
 const NAV = [
-  { href: "/", label: "首页", match: (p: string) => p === "/" },
+  { href: "/", label: "首页", match: (p: string) => p === "/" || p === "/b" },
   { href: "/discover", label: "发现", match: (p: string) => p.startsWith("/discover") },
-  { href: "/feed", label: "信息流", match: (p: string) => p.startsWith("/feed") },
-  { href: "/events", label: "活动", match: (p: string) => p.startsWith("/events") },
-  { href: "/demo-day", label: "月度路演", match: (p: string) => p.startsWith("/demo-day") },
+  { href: "/me", label: "我的", match: (p: string) => p === "/me" || p.startsWith("/me/") },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const bare = pathname.startsWith("/welcome") || pathname.startsWith("/digest/preview");
+  const portal = pathname === "/" || pathname === "/b" || pathname === "/c" || pathname === "/d" || pathname === "/e" || pathname === "/f";
   const chat = /^\/inbox\/[^/]+/.test(pathname);
   return (
     <div className="flex min-h-screen flex-col">
-      {bare ? null : <TopNav />}
-      <main className={cn("flex-1", !bare && !chat && "pb-20 md:pb-0")}>{children}</main>
-      {bare || chat ? null : <MobileTabBar />}
+      {bare || portal ? null : <TopNav />}
+      <main className={cn("flex-1", !bare && !chat && !portal && "pb-20 md:pb-0")}>{children}</main>
+      {bare || chat || portal ? null : <MobileTabBar />}
       <Toaster />
       <LoginPrompt />
       <GlobalHosts />
@@ -59,10 +58,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2" aria-label="Pitch 首页">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[15px] font-black text-highlight">P</span>
-      <span className="text-lg font-bold tracking-tight text-gray-900">Pitch</span>
-      <span className="hidden rounded border border-gray-200 px-1 text-[10px] font-semibold text-gray-500 sm:inline">原型</span>
+    <Link href="/" className="shrink-0" aria-label="培驰商学首页">
+      <img src="/brand/logo-horizontal.png" alt="" className="h-9 w-auto sm:h-10" />
     </Link>
   );
 }
@@ -86,19 +83,12 @@ function TopNav() {
   const notiCount = viewer ? unreadNotifications(db, viewer.id) : 0;
 
   return (
-    <header className="sticky top-0 z-[60] border-b border-gray-200 bg-white/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-4 px-4 sm:px-8">
+    <header className="sticky top-0 z-[60] border-b border-black/10 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto flex h-[72px] max-w-[1440px] items-center gap-6 px-5 sm:px-10">
         <Logo />
-        <nav className="ml-4 hidden items-center gap-0.5 md:flex">
+        <nav className="hidden items-center gap-7 md:flex" aria-label="主导航">
           {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className={cn(
-                "rounded-md px-3 py-2 text-[15px] font-semibold transition-colors",
-                n.match(pathname) ? "bg-gray-50 text-gray-900" : "text-gray-500 hover:bg-gray-50 hover:text-gray-800",
-              )}
-            >
+            <Link key={n.href} href={n.href} className={cn("text-sm font-medium", n.match(pathname) ? "text-gray-950" : "text-gray-500 hover:text-gray-950")}>
               {n.label}
             </Link>
           ))}
@@ -107,21 +97,21 @@ function TopNav() {
           <PersonaSwitcher />
           {viewer ? (
             <>
-              <Button variant="primary" size="sm" iconLeft={Plus} onClick={openCreate} className="hidden md:inline-flex">
+              <Button variant="primary" size="sm" iconLeft={Plus} onClick={openCreate} className="hidden rounded-none bg-[#8adf4a] text-black shadow-none hover:bg-[#78d63a] md:inline-flex">
                 创建项目
               </Button>
-              <Link href="/inbox" className="relative hidden rounded-lg p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700 md:inline-flex" aria-label="收件箱">
+              <Link href="/inbox" className="relative hidden p-2 text-gray-500 hover:text-gray-950 md:inline-flex" aria-label="收件箱">
                 <Inbox size={20} />
                 <CountDot n={inboxCount} />
               </Link>
-              <Link href="/notifications" className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700" aria-label="通知">
+              <Link href="/notifications" className="relative p-2 text-gray-500 hover:text-gray-950" aria-label="通知">
                 <Bell size={20} />
                 <CountDot n={notiCount} />
               </Link>
               <UserMenu />
             </>
           ) : (
-            <Button variant="primary" size="sm" iconLeft={LogIn} onClick={() => requireLogin("登录后可以关注项目、表达意向")}>
+            <Button variant="primary" size="sm" iconLeft={LogIn} onClick={() => requireLogin("登录后可以关注项目、表达意向")} className="rounded-none bg-[#8adf4a] text-black shadow-none hover:bg-[#78d63a]">
               登录
             </Button>
           )}
@@ -275,28 +265,19 @@ function MobileTabBar() {
     { href: "/discover", label: "发现", icon: Compass, active: pathname.startsWith("/discover") },
     { href: "#create", label: "创建", icon: Plus, active: false },
     { href: "/inbox", label: "收件箱", icon: Inbox, active: pathname.startsWith("/inbox"), count: inboxCount },
-    { href: viewer ? `/u/${viewer.handle}` : "#login", label: "我的", icon: UserRound, active: pathname.startsWith("/u/") },
+    { href: "/me", label: "我的", icon: UserRound, active: pathname === "/me" || pathname.startsWith("/me/") },
   ];
-  const requireLogin = useApp((s) => s.requireLogin);
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-[60] border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-[60] border-t border-black/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
       <div className="grid grid-cols-5">
         {items.map((it) => {
           const Icon = it.icon;
           if (it.href === "#create") {
             return (
               <button key={it.label} onClick={openCreate} className="flex flex-col items-center justify-center py-2" aria-label="创建项目">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-highlight shadow-sm">
+                <span className="flex h-9 w-9 items-center justify-center bg-[#8adf4a] text-black">
                   <Plus size={20} strokeWidth={2.5} />
                 </span>
-              </button>
-            );
-          }
-          if (it.href === "#login") {
-            return (
-              <button key={it.label} onClick={() => requireLogin("登录后查看你的主页")} className="flex flex-col items-center gap-0.5 py-2 text-gray-500">
-                <Icon size={22} />
-                <span className="text-[11px] font-medium">{it.label}</span>
               </button>
             );
           }

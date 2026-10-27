@@ -183,7 +183,7 @@ function DashboardView() {
         ) : tab === "updates" ? (
           <UpdatesPanel project={project} />
         ) : tab === "exposure" ? (
-          <ExposurePanel project={project} onTab={setTab} />
+          <ExposurePanel project={project} />
         ) : tab === "share" ? (
           <SharePanel project={project} />
         ) : (

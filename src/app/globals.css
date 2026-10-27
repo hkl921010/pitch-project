@@ -3,7 +3,7 @@
 
 /*
  * 视觉：Untitled UI 的灰阶、阴影、圆角与聚焦环；
- * 品牌：Pitch Web 现有 token（主色 zinc-900、辅色黄、点缀紫 brand-600）。
+ * 品牌：培驰门户的墨色与芽绿。主按钮仍用 zinc-900，强调色对齐首页的 #8adf4a。
  */
 @theme {
   --font-sans: "Inter Variable", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
@@ -24,17 +24,17 @@
   --color-primary: #18181b;
   --color-primary-hover: #27272a;
 
-  --color-brand-25: hsl(264 70% 98.5%);
-  --color-brand-50: hsl(264 63% 97%);
-  --color-brand-100: hsl(259 61% 94%);
-  --color-brand-200: hsl(259 61% 88%);
-  --color-brand-300: hsl(259 58% 78%);
-  --color-brand-400: hsl(259 55% 66%);
-  --color-brand-500: hsl(259 53% 56%);
-  --color-brand-600: hsl(259 52% 48%);
-  --color-brand-700: hsl(259 52% 40%);
-  --color-brand-800: hsl(259 50% 32%);
-  --color-brand-900: hsl(260 48% 26%);
+  --color-brand-25: #f7fbf3;
+  --color-brand-50: #eef6e6;
+  --color-brand-100: #dff0cc;
+  --color-brand-200: #c6e4a4;
+  --color-brand-300: #a6d474;
+  --color-brand-400: #8adf4a;
+  --color-brand-500: #5ea832;
+  --color-brand-600: #1f6b12;
+  --color-brand-700: #18560e;
+  --color-brand-800: #12420b;
+  --color-brand-900: #0d3008;
 
   --color-highlight: hsl(60 100% 58%);
   --color-highlight-soft: hsl(60 100% 90%);
@@ -136,6 +136,24 @@
   background: linear-gradient(90deg, var(--color-gray-100) 0%, var(--color-gray-50) 40%, var(--color-gray-100) 80%);
   background-size: 800px 100%;
   animation: var(--animate-shimmer);
+}
+
+/* 发现、我的：跟首页一样的直角、细线和白底，不再用应用卡片的圆角和阴影。 */
+.academy-surface .rounded-xl,
+.academy-surface .rounded-lg,
+.academy-surface .rounded-md {
+  border-radius: 0;
+}
+.academy-surface .shadow-xs,
+.academy-surface .shadow-sm,
+.academy-surface .shadow-md,
+.academy-surface .hover\:shadow-md:hover {
+  box-shadow: none;
+}
+.academy-surface h2 {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
 }
 
 .mark-highlight {

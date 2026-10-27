@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BellRing, Check, Eye, Flame, Handshake, MessageCircle, ShieldCheck, Trophy, X } from "lucide-react";
+import { AlertTriangle, BellRing, Check, Eye, Flame, Handshake, MessageCircle, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { Suspense, useState } from "react";
 
@@ -16,12 +16,10 @@ import type { Conversation, DB, MatchStage, Project } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useQueryParam } from "@/lib/use-query";
 import { useApp } from "@/store/app-store";
-import { currentDemoDay, getPerson, getProject, projectCompletion, roleText, useDB, useViewer } from "@/store/selectors";
+import { getPerson, getProject, projectCompletion, roleText, useDB, useViewer } from "@/store/selectors";
 
 type Tab = "match" | "hot" | "review";
 
-/** 每期路演大约选这么多个项目入围。 */
-const SHORTLIST_TARGET = 6;
 const NOTE_MIN = 6;
 
 export default function OpsPage() {
@@ -49,11 +47,9 @@ function OpsView() {
 
   const matchPending = db.conversations.filter((c) => c.status === "match_requested").length;
   const wallPending = db.projects.filter((p) => p.wall === "pending").length;
-  const ddPending = currentDemoDay(db)?.entries.filter((e) => e.status === "applied").length ?? 0;
-
   return (
     <Page>
-      <PageHeader title="运营看板" desc="撮合即商机：接手、推进、结案都会同步到双方的对话里。上墙和路演审核随报随审。" />
+      <PageHeader title="运营看板" desc="撮合即商机：接手、推进、结案都会同步到双方的对话里。上墙审核随报随审。" />
       <Tabs
         className="mt-6"
         value={tab}
@@ -61,7 +57,7 @@ function OpsView() {
         items={[
           { value: "match", label: "撮合", count: matchPending || undefined, dot: matchPending > 0 },
           { value: "hot", label: "高意向项目" },
-          { value: "review", label: "上墙与路演审核", count: wallPending + ddPending || undefined, dot: wallPending + ddPending > 0 },
+          { value: "review", label: "上墙审核", count: wallPending || undefined, dot: wallPending > 0 },
         ]}
       />
       <div className="mt-6">{tab === "hot" ? <HotProjects /> : tab === "review" ? <Review /> : <Matches />}</div>
@@ -544,18 +540,14 @@ const REJECT_REASONS = ["资料不完整，补充介绍和产品", "缺少可验
 
 function Review() {
   const db = useDB();
-  const [rejecting, setRejecting] = useState<{ kind: "wall" | "demo"; project: Project } | null>(null);
+  const [rejecting, setRejecting] = useState<Project | null>(null);
   const pending = db.projects.filter((p) => p.wall === "pending");
   const rejected = db.projects.filter((p) => p.wall === "rejected");
-  const dd = currentDemoDay(db);
-  const applied = dd?.entries.filter((e) => e.status === "applied") ?? [];
-  const shortlisted = dd?.entries.filter((e) => e.status === "shortlisted") ?? [];
   const review = useApp((s) => s.reviewWall);
-  const reviewDD = useApp((s) => s.reviewDemoDayEntry);
   const toast = useApp((s) => s.toast);
 
   return (
-    <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+    <div>
       <section className="min-w-0">
         <SectionTitle title={`上墙审核（${pending.length}）`} desc="通过后项目出现在发现页；不通过要写原因，项目方可以改完再申请。公开页不受影响。" />
         {pending.length ? (
@@ -577,7 +569,7 @@ function Review() {
                     >
                       通过
                     </Button>
-                    <Button size="sm" variant="secondary" iconLeft={X} onClick={() => setRejecting({ kind: "wall", project: p })}>
+                    <Button size="sm" variant="secondary" iconLeft={X} onClick={() => setRejecting(p)}>
                       不通过
                     </Button>
                   </>
@@ -606,85 +598,13 @@ function Review() {
         ) : null}
       </section>
 
-      <section className="min-w-0">
-        {dd ? (
-          <>
-            <SectionTitle title={`${dd.title}报名（${applied.length}）`} desc={`已入围 ${shortlisted.length} 个，每期选 ${SHORTLIST_TARGET} 个左右。看进展、完成度和赛道多样性。`} />
-            <ProgressBar value={(shortlisted.length / SHORTLIST_TARGET) * 100} tone="highlight" className="mb-4" />
-            {applied.length ? (
-              <div className="flex flex-col gap-3">
-                {applied.map((e) => {
-                  const p = getProject(db, e.projectId);
-                  if (!p) return null;
-                  const sameTrack = shortlisted.filter((x) => getProject(db, x.projectId)?.track === p.track).length;
-                  return (
-                    <ReviewCard
-                      key={p.id}
-                      project={p}
-                      extra={
-                        <>
-                          <p className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-                            <span className="text-xs text-gray-500">路演想讲 · {relativeTime(e.appliedAt)}报名</span>
-                            <span className="mt-0.5 block">{e.pitchNote}</span>
-                          </p>
-                          {sameTrack ? <p className="mt-2 text-xs text-warning-700">已入围项目里有 {sameTrack} 个同赛道（{p.track}）</p> : null}
-                        </>
-                      }
-                      actions={
-                        <>
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            iconLeft={Trophy}
-                            onClick={() => {
-                              reviewDD(dd.id, p.id, "shortlisted");
-                              toast({ tone: "success", title: `${p.name}已入围`, body: "已通知项目方，获得“路演入围”徽章" });
-                            }}
-                          >
-                            入围
-                          </Button>
-                          <Button size="sm" variant="secondary" iconLeft={X} onClick={() => setRejecting({ kind: "demo", project: p })}>
-                            本期不入围
-                          </Button>
-                        </>
-                      }
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <Empty text="没有待评审的报名。" />
-            )}
-            {shortlisted.length ? (
-              <div className="mt-4">
-                <p className="mb-2 text-xs font-medium text-gray-500">已入围</p>
-                <div className="flex flex-wrap gap-2">
-                  {shortlisted.map((e) => {
-                    const p = getProject(db, e.projectId);
-                    return p ? (
-                      <Link key={p.id} href={`/p/${p.slug}`} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white py-0.5 pr-3 pl-0.5 text-sm font-medium text-gray-700 hover:border-gray-300">
-                        <ProjectLogo text={p.logoText} tone={p.logoTone} size="xs" className="rounded-full" />
-                        {p.name}
-                      </Link>
-                    ) : null;
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <Empty text="本月路演还没开放报名。" />
-        )}
-      </section>
-
       <RejectModal
-        target={rejecting}
+        project={rejecting}
         onClose={() => setRejecting(null)}
         onConfirm={(reason) => {
           if (!rejecting) return;
-          if (rejecting.kind === "wall") review(rejecting.project.id, false, reason);
-          else if (dd) reviewDD(dd.id, rejecting.project.id, "rejected", reason);
-          toast({ tone: "info", title: rejecting.kind === "wall" ? "已退回" : "已标为本期不入围", body: "已通知项目方和原因" });
+          review(rejecting.id, false, reason);
+          toast({ tone: "info", title: "已退回", body: "已通知项目方和原因" });
         }}
       />
     </div>
@@ -726,11 +646,10 @@ function ReviewCard({ project, actions, extra }: { project: Project; actions: Re
   );
 }
 
-function RejectModal({ target, onClose, onConfirm }: { target: { kind: "wall" | "demo"; project: Project } | null; onClose: () => void; onConfirm: (reason: string) => void }) {
+function RejectModal({ project, onClose, onConfirm }: { project: Project | null; onClose: () => void; onConfirm: (reason: string) => void }) {
   const [reason, setReason] = useState("");
   const [tried, setTried] = useState(false);
-  const needs = target?.kind === "wall";
-  const err = needs && !reason.trim() ? "写一句原因，项目方知道该改什么" : undefined;
+  const err = project && !reason.trim() ? "写一句原因，项目方知道该改什么" : undefined;
   const close = () => {
     setReason("");
     setTried(false);
@@ -738,11 +657,11 @@ function RejectModal({ target, onClose, onConfirm }: { target: { kind: "wall" | 
   };
   return (
     <Modal
-      open={!!target}
+      open={!!project}
       onClose={close}
       size="sm"
-      title={target?.kind === "wall" ? `${target.project.name}暂不上发现页` : `${target?.project.name ?? ""}本期不入围`}
-      desc={target?.kind === "wall" ? "原因会发给项目方，改完可以重新申请。" : "会通知项目方，下个月可以再报名。原因选填。"}
+      title={project ? `${project.name}暂不上发现页` : ""}
+      desc="原因会发给项目方，改完可以重新申请。"
       footer={
         <>
           <Button onClick={close}>取消</Button>
@@ -762,13 +681,13 @@ function RejectModal({ target, onClose, onConfirm }: { target: { kind: "wall" | 
     >
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap gap-1.5">
-          {(target?.kind === "wall" ? REJECT_REASONS : ["本期同赛道项目较多", "进展还不够，建议下期再报", "路演想讲的内容不够具体"]).map((r) => (
+          {REJECT_REASONS.map((r) => (
             <Tag key={r} active={reason === r} onClick={() => setReason(r)}>
               {r}
             </Tag>
           ))}
         </div>
-        <Textarea label={needs ? "原因" : "原因（选填）"} required={needs} rows={2} maxCount={60} value={reason} onChange={(e) => setReason(e.target.value)} error={tried ? err : undefined} />
+        <Textarea label="原因" required rows={2} maxCount={60} value={reason} onChange={(e) => setReason(e.target.value)} error={tried ? err : undefined} />
       </div>
     </Modal>
   );

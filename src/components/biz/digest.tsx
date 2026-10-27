@@ -4,16 +4,14 @@ import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 
-import { Avatar, Cover, ProjectLogo } from "@/components/ui/display";
+import { Avatar, ProjectLogo } from "@/components/ui/display";
 import { INTENT_KIND_LABEL, NOTIFICATION_TYPES, SOURCE_LABEL } from "@/data/constants";
 import { formatDate, formatDateTime, nowMs } from "@/data/time";
-import type { Article, DB, Intent, Notification, Person, PitchEvent, Project, TrafficSource } from "@/data/types";
+import type { DB, Intent, Notification, Person, Project, TrafficSource } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { notifyPrefsOf } from "@/store/app-store";
 import {
   anonymousProfile,
-  currentDemoDay,
-  eventStatus,
   followerCount,
   getPerson,
   getProject,
@@ -85,19 +83,15 @@ export type DigestData =
       topSource?: { label: string; share: number };
       todos: DigestTodo[];
       investors: Person[];
-      events: PitchEvent[];
     }
   | {
       kind: "investor";
       person: Person;
       fresh: { project: Project; count: number; latest: string }[];
       matches: Project[];
-      demo?: { title: string; projects: Project[]; voted: boolean };
       slots: { id: string; start: string; topic: string; status: "requested" | "confirmed"; who?: Person }[];
       waiting: number;
       accepted: number;
-      articles: Article[];
-      events: PitchEvent[];
     }
   | {
       kind: "general";
@@ -105,21 +99,9 @@ export type DigestData =
       pending: number;
       invites: Project[];
       hot: Project[];
-      articles: Article[];
-      events: PitchEvent[];
     };
 
-function upcomingEvents(db: DB) {
-  return db.events
-    .filter((e) => eventStatus(e) !== "ended")
-    .sort((a, b) => a.start.localeCompare(b.start))
-    .slice(0, 2);
-}
-
 export function buildDigest(db: DB, person: Person, role: DigestRole): DigestData | null {
-  const events = upcomingEvents(db);
-  const articles = [...db.articles].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 2);
-
   if (role === "founder") {
     const project = manageableProjects(db, person.id)[0];
     if (!project) return null;
@@ -133,16 +115,13 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
     const lastUpdate = [...project.updates].sort((a, b) => b.at.localeCompare(a.at))[0];
     const srcTotal = sum(Object.values(project.stats.sources));
     const top = (Object.entries(project.stats.sources) as [TrafficSource, number][]).sort((a, b) => b[1] - a[1])[0];
-    const dd = currentDemoDay(db);
-    const entry = dd?.entries.find((e) => e.projectId === project.id);
     const base = `/dashboard/${project.slug}`;
 
     const todos: DigestTodo[] = [];
     if (pending.length) todos.push({ title: `回应 ${pending.length} 条意向`, desc: "回复速度会显示在项目页上", href: `${base}?tab=intents` });
     if (invited) todos.push({ title: `${invited} 位成员还没确认`, desc: "确认后项目会出现在 TA 的主页上", href: `${base}?tab=team` });
     if (!lastUpdate || !within(lastUpdate.at, 14)) todos.push({ title: lastUpdate ? "两周没发动态了" : "发第一条动态", desc: "关注和观察你的人会收到提醒", href: `${base}?tab=updates` });
-    if (dd && entry?.status === "shortlisted") todos.push({ title: `${dd.title}入围了，拉朋友投票`, desc: `目前 ${dd.votes[project.id]?.length ?? 0} 票`, href: "/demo-day" });
-    else if (dd && !entry && completion.percent >= 80) todos.push({ title: `报名${dd.title}`, desc: "资料已达标，可以直接报名", href: `${base}?tab=exposure` });
+    if (completion.percent >= 80 && project.wall !== "approved" && project.wall !== "pending") todos.push({ title: "申请上发现页", desc: "资料已达标，可以直接申请", href: `${base}?tab=exposure` });
     if (completion.remaining) todos.push({ title: `补全资料（还差 ${completion.remaining} 项）`, desc: `完成度 ${completion.percent}%`, href: `/p/${project.slug}/edit` });
 
     return {
@@ -160,7 +139,6 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
       topSource: top && srcTotal ? { label: SOURCE_LABEL[top[0]], share: Math.round((top[1] / srcTotal) * 100) } : undefined,
       todos: todos.slice(0, 4),
       investors: db.people.filter((p) => p.role === "investor" && p.openStatus.active && p.openStatus.investor?.tracks.includes(project.track) && !project.team.some((m) => m.personId === p.id)).slice(0, 3),
-      events,
     };
   }
 
@@ -170,7 +148,6 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
     const raising = (p: Project) => p.lookingFor.find((n) => n.kind === "invest");
     const score = (p: Project) => (tracks.includes(p.track) ? 2 : 0) + (stages.some((s) => raising(p)?.sub?.startsWith(s)) ? 1 : 0);
     const watched = new Set(db.watch.filter((w) => w.userId === person.id).map((w) => w.projectId));
-    const dd = currentDemoDay(db);
     const sent = intentsSent(db, person.id);
     return {
       kind: "investor",
@@ -182,21 +159,12 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
         .filter((p) => p.visibility === "public" && p.wall === "approved" && score(p) > 0 && !watched.has(p.id) && !p.team.some((m) => m.personId === person.id))
         .sort((a, b) => score(b) - score(a) || b.createdAt.localeCompare(a.createdAt))
         .slice(0, 3),
-      demo: dd
-        ? {
-            title: dd.title,
-            projects: dd.entries.filter((e) => e.status === "shortlisted").map((e) => getProject(db, e.projectId)).filter((p): p is Project => !!p),
-            voted: Object.values(dd.votes).some((v) => v.includes(person.id)),
-          }
-        : undefined,
       slots: db.officeHours
         .filter((s) => s.hostId === person.id && (s.status === "requested" || s.status === "confirmed") && new Date(s.start).getTime() > nowMs())
         .sort((a, b) => a.start.localeCompare(b.start))
         .map((s) => ({ id: s.id, start: s.start, topic: s.topic, status: s.status as "requested" | "confirmed", who: getPerson(db, s.bookedBy) })),
       waiting: sent.filter((i) => requesterView(i) === "waiting").length,
       accepted: sent.filter((i) => i.status === "accepted" && i.respondedAt && within(i.respondedAt, 7)).length,
-      articles,
-      events,
     };
   }
 
@@ -209,8 +177,6 @@ export function buildDigest(db: DB, person: Person, role: DigestRole): DigestDat
       .filter((p) => p.visibility === "public" && p.wall === "approved")
       .sort((a, b) => followerCount(db, "project", b.id) - followerCount(db, "project", a.id))
       .slice(0, 3),
-    articles,
-    events,
   };
 }
 
@@ -242,7 +208,6 @@ export function digestSummary(d: DigestData): { title: string; fields: [string, 
         ["观察清单", d.fresh.length ? `${d.fresh.length} 个项目有新动态` : "没有新动态"],
         ["符合偏好的新项目", `${d.matches.length} 个`],
         ["本周答疑", d.slots.length ? `${d.slots.length} 场${d.slots.some((s) => s.status === "requested") ? "，有待确认" : ""}` : "无"],
-        ["月度路演", d.demo ? `${d.demo.projects.length} 个项目入围${d.demo.voted ? "，你已投票" : ""}` : "本月未开放"],
       ],
       remark: d.fresh[0] ? `${d.fresh[0].project.name}：${d.fresh[0].latest}` : "看看本周符合你偏好的项目",
     };
@@ -253,7 +218,7 @@ export function digestSummary(d: DigestData): { title: string; fields: [string, 
       ["待你回应", d.pending + d.invites.length ? `${d.pending + d.invites.length} 件` : "无"],
       ["热门项目", d.hot.map((p) => p.name).join("、") || "暂无"],
     ],
-    remark: d.articles[0] ? `本周报道：${d.articles[0].title}` : "看看本周的新项目",
+    remark: "看看本周的新项目",
   };
 }
 
@@ -306,38 +271,6 @@ function Row({ href, left, title, desc, right }: { href: string; left: ReactNode
   );
 }
 
-function EventRows({ events }: { events: PitchEvent[] }) {
-  if (!events.length) return <p className="text-sm text-gray-500">近期没有活动。</p>;
-  return (
-    <div className="flex flex-col">
-      {events.map((e) => (
-        <Row
-          key={e.id}
-          href={`/events/${e.id}`}
-          left={
-            <span className="flex h-10 w-10 flex-col items-center justify-center rounded-lg border border-gray-200 text-center leading-none">
-              <span className="text-[10px] text-gray-500">{new Date(e.start).getMonth() + 1} 月</span>
-              <span className="text-sm font-semibold text-gray-900">{new Date(e.start).getDate()}</span>
-            </span>
-          }
-          title={e.title}
-          desc={`${e.kind === "online" ? "线上" : e.city ?? "线下"} · ${formatDateTime(e.start)}`}
-        />
-      ))}
-    </div>
-  );
-}
-
-function ArticleRows({ articles }: { articles: Article[] }) {
-  return (
-    <div className="flex flex-col">
-      {articles.map((a) => (
-        <Row key={a.id} href={`/feed?tab=articles&article=${a.id}`} left={<Cover tone={a.coverTone} className="h-10 w-10 rounded-lg" />} title={a.title} desc={`${a.column} · ${a.readMins} 分钟`} />
-      ))}
-    </div>
-  );
-}
-
 export function DigestEmailBody({ db, data }: { db: DB; data: DigestData }) {
   const period = digestPeriod();
   const p = data.person;
@@ -364,7 +297,7 @@ export function DigestEmailBody({ db, data }: { db: DB; data: DigestData }) {
                 : `本周有 ${data.matches.length} 个符合你偏好的项目`
               : data.pending + data.invites.length
                 ? `有 ${data.pending + data.invites.length} 件事在等你回应`
-                : "本周值得看的项目、需求和活动"}
+                : "本周值得看的项目和需求"}
         </h2>
       </div>
 
@@ -469,10 +402,6 @@ function FounderEmail({ db, d }: { db: DB; d: Extract<DigestData, { kind: "found
         </EmailSection>
       ) : null}
 
-      <EmailSection title="近期活动">
-        <EventRows events={d.events} />
-      </EmailSection>
-
       <div className="border-t border-gray-100 px-5 py-6 sm:px-8">
         <EmailButton href={base}>打开项目工作台</EmailButton>
       </div>
@@ -553,32 +482,6 @@ function InvestorEmail({ d }: { d: Extract<DigestData, { kind: "investor" }> }) 
         </EmailSection>
       ) : null}
 
-      {d.demo ? (
-        <EmailSection title={d.demo.title} desc={d.demo.voted ? "你已投票，结果公布时会通知你" : "入围项目已公布，投票也算一项贡献任务"}>
-          <div className="flex flex-wrap gap-2">
-            {d.demo.projects.map((p) => (
-              <Link key={p.id} href={`/p/${p.slug}`} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 py-0.5 pr-3 pl-0.5 text-sm font-medium text-gray-700 hover:border-gray-300">
-                <ProjectLogo text={p.logoText} tone={p.logoTone} size="xs" className="rounded-full" />
-                {p.name}
-              </Link>
-            ))}
-          </div>
-          <div className="mt-4">
-            <EmailButton href="/demo-day" quiet>
-              {d.demo.voted ? "查看路演" : "去投票"}
-            </EmailButton>
-          </div>
-        </EmailSection>
-      ) : null}
-
-      <EmailSection title="Pitch 报道">
-        <ArticleRows articles={d.articles} />
-      </EmailSection>
-
-      <EmailSection title="近期活动">
-        <EventRows events={d.events} />
-      </EmailSection>
-
       <div className="border-t border-gray-100 px-5 py-6 sm:px-8">
         <EmailButton href="/watchlist">打开观察清单</EmailButton>
       </div>
@@ -608,14 +511,6 @@ function GeneralEmail({ d }: { d: Extract<DigestData, { kind: "general" }> }) {
         </div>
       </EmailSection>
 
-      <EmailSection title="Pitch 报道">
-        <ArticleRows articles={d.articles} />
-      </EmailSection>
-
-      <EmailSection title="近期活动">
-        <EventRows events={d.events} />
-      </EmailSection>
-
       <div className="border-t border-gray-100 px-5 py-6 sm:px-8">
         <EmailButton href="/discover">去发现页看看</EmailButton>
       </div>
@@ -631,7 +526,6 @@ const PUSH_TITLE: Partial<Record<Notification["type"], string>> = {
   member: "成员邀请提醒",
   officehours: "答疑预约提醒",
   update: "项目动态提醒",
-  demoday: "月度路演提醒",
   reward: "任务奖励提醒",
 };
 

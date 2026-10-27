@@ -303,8 +303,8 @@ function Settings() {
             <ul className="mt-3 flex flex-col gap-3 text-sm">
               {[
                 { k: "founder", d: "项目的浏览、关注、意向和来源变化，等你回应的意向，本周值得做的事，关注你赛道的投资人。" },
-                { k: "investor", d: "观察清单的新动态，符合投资偏好的新项目，答疑预约，月度路演和报道。" },
-                { k: "general", d: "等你回应的事，和你身份相关的“正在寻找”与岗位，热门项目、报道和活动。" },
+                { k: "investor", d: "观察清单的新动态，符合投资偏好的新项目，答疑预约。" },
+                { k: "general", d: "等你回应的事，和你身份相关的“正在寻找”与岗位，以及热门项目。" },
               ].map((x) => (
                 <li key={x.k} className={x.k === role ? "rounded-lg bg-brand-25 p-2.5 ring-1 ring-brand-200" : "p-2.5"}>
                   <p className="font-semibold text-gray-900">

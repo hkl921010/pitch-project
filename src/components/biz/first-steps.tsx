@@ -24,7 +24,7 @@ export function FirstStepsCard() {
     <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs">
       <div className="flex items-center gap-4 bg-[linear-gradient(100deg,var(--color-gray-900),var(--color-brand-800))] px-5 py-4 text-white">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-highlight">{ROLE_LABEL[viewer.role]}的第一步</p>
+          <p className="text-xs font-semibold text-[#8adf4a]">{ROLE_LABEL[viewer.role]}的第一步</p>
           <p className="mt-0.5 font-semibold">
             已完成 {done}/{steps.length}，做完这几件事，Pitch 才能帮你找到对的人
           </p>

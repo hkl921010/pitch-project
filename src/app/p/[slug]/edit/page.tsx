@@ -260,7 +260,7 @@ function EditView() {
                 value={draft.visibility}
                 onChange={(v) => set("visibility", v)}
                 options={[
-                  { value: "public", title: "公开", desc: "可申请上发现页和月度路演", icon: Globe },
+                  { value: "public", title: "公开", desc: "可申请上发现页", icon: Globe },
                   { value: "link", title: "仅持链接可见", desc: "不出现在发现页，链接仍可访问", icon: Link2 },
                 ]}
               />
@@ -644,7 +644,7 @@ function CompletionCard({ completion, slug }: { completion: ReturnType<typeof pr
         </ProgressRing>
         <div>
           <p className="text-sm font-semibold text-gray-900">资料完成度</p>
-          <p className="text-xs text-gray-500">{completion.remaining ? `还差 ${completion.remaining} 项；80% 以上可申请上发现页和月度路演` : "全部完成，可以申请上发现页和月度路演"}</p>
+          <p className="text-xs text-gray-500">{completion.remaining ? `还差 ${completion.remaining} 项；80% 以上可申请上发现页` : "全部完成，可以申请上发现页"}</p>
         </div>
       </div>
       <ul className="flex flex-col gap-1">

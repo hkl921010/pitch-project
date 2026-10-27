@@ -14,7 +14,6 @@ import {
   Megaphone,
   PencilLine,
   Share2,
-  Trophy,
   UserPlus,
   XCircle,
   type LucideIcon,
@@ -29,17 +28,17 @@ import { Badge, Card, Cover, EmptyState, FeaturedIcon, ProgressRing, ProjectLogo
 import { Input, Textarea } from "@/components/ui/form";
 import { Segmented } from "@/components/ui/tabs";
 import { BADGES, SOURCE_LABEL } from "@/data/constants";
-import { ago, daysSince, effectiveNow, formatDate, formatDateTime } from "@/data/time";
+import { ago, daysSince, formatDate } from "@/data/time";
 import type { Project, TrafficSource } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { useApp } from "@/store/app-store";
-import { currentDemoDay, followerCount, getPerson, projectCompletion, useDB } from "@/store/selectors";
+import { followerCount, getPerson, projectCompletion, useDB } from "@/store/selectors";
 
 export type WorkspaceTab = "overview" | "intents" | "team" | "updates" | "exposure" | "share";
 
 const sum = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
 
-/** 达到这个完成度才能申请上发现页和报名月度路演。 */
+/** 达到这个完成度才能申请上发现页。 */
 export const EXPOSURE_MIN_COMPLETION = 80;
 
 /* ------------------------------------------------------------------ 概览 */
@@ -245,32 +244,13 @@ function Funnel({ steps }: { steps: { label: string; value: number }[] }) {
   );
 }
 
-/* ------------------------------------------------------------------ 曝光：上墙、路演、徽章 */
+/* ------------------------------------------------------------------ 曝光：上墙、徽章 */
 
-export function ExposurePanel({ project, onTab }: { project: Project; onTab: (t: WorkspaceTab) => void }) {
-  const db = useDB();
+export function ExposurePanel({ project }: { project: Project }) {
   const applyWall = useApp((s) => s.applyWall);
-  const applyDemoDay = useApp((s) => s.applyDemoDay);
   const toast = useApp((s) => s.toast);
   const completion = projectCompletion(project);
   const ready = completion.percent >= EXPOSURE_MIN_COMPLETION;
-  const dd = currentDemoDay(db);
-  const entry = dd?.entries.find((e) => e.projectId === project.id);
-  const closed = dd ? effectiveNow() > new Date(dd.applyDeadline).getTime() : true;
-  const [note, setNote] = useState("");
-  const [tried, setTried] = useState(false);
-  const noteError = tried && note.trim().length < 10 ? "至少 10 个字，让评审知道你想讲什么" : undefined;
-  const past = db.demoDays.filter((d) => d.status === "ended" && d.entries.some((e) => e.projectId === project.id));
-
-  const votes = dd && entry ? dd.votes[project.id]?.length ?? 0 : 0;
-  const rank =
-    dd && entry?.status === "shortlisted"
-      ? dd.entries
-          .filter((e) => e.status === "shortlisted")
-          .map((e) => ({ id: e.projectId, v: dd.votes[e.projectId]?.length ?? 0 }))
-          .sort((a, b) => b.v - a.v)
-          .findIndex((x) => x.id === project.id) + 1
-      : 0;
 
   const Requirement = ({ ok, children }: { ok: boolean; children: React.ReactNode }) => (
     <li className="flex items-start gap-2 text-sm">
@@ -344,92 +324,6 @@ export function ExposurePanel({ project, onTab }: { project: Project; onTab: (t:
 
       <Card className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
-          <FeaturedIcon icon={Trophy} tone="highlight" />
-          <div className="min-w-0 flex-1">
-            <h3 className="text-base font-semibold text-gray-900">月度路演</h3>
-            <p className="text-sm text-gray-500">{dd ? `${dd.title} · ${dd.theme}` : "本月暂无开放的路演"}</p>
-          </div>
-          {entry ? <EntryBadge status={entry.status} /> : null}
-        </div>
-
-        {!dd ? (
-          <p className="text-sm text-gray-500">下一期开放报名时会通知你。</p>
-        ) : entry?.status === "shortlisted" ? (
-          <div className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-gray-50 p-3">
-                <p className="text-xs text-gray-500">当前票数</p>
-                <p className="text-xl font-semibold text-gray-900 tabular-nums">{votes}</p>
-              </div>
-              <div className="rounded-lg bg-gray-50 p-3">
-                <p className="text-xs text-gray-500">入围项目中排名</p>
-                <p className="text-xl font-semibold text-gray-900 tabular-nums">第 {rank} 名</p>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500">开放后前几天名单随机排序，之后按票数排序。投票会为投票人换得意向次数。</p>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="primary" href="/demo-day">
-                去路演页
-              </Button>
-              <Button size="sm" variant="secondary" iconLeft={Share2} onClick={() => onTab("share")}>
-                分享拉票
-              </Button>
-            </div>
-          </div>
-        ) : entry?.status === "applied" ? (
-          <div className="rounded-lg border border-gray-200 bg-gray-25 p-4 text-sm text-gray-700">
-            <p>
-              已报名，运营会在 {formatDateTime(dd.applyDeadline)} 报名截止后公布入围名单。
-            </p>
-            <p className="mt-2 text-gray-500">你想讲：{entry.pitchNote}</p>
-          </div>
-        ) : entry?.status === "rejected" ? (
-          <div className="rounded-lg border border-gray-200 bg-gray-25 p-4 text-sm text-gray-700">
-            本期未入围{entry.opsNote ? `：${entry.opsNote}` : ""}。下个月可以再报名，入围与否不影响项目页。
-          </div>
-        ) : closed ? (
-          <p className="text-sm text-gray-500">本期报名已截止，下一期开放时会通知你。</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <ul className="flex flex-col gap-2">
-              <Requirement ok={ready}>资料完成度达到 {EXPOSURE_MIN_COMPLETION}%（当前 {completion.percent}%）</Requirement>
-              <Requirement ok>报名截止 {formatDateTime(dd.applyDeadline)}</Requirement>
-            </ul>
-            <Textarea
-              rows={2}
-              label="你想在路演上讲什么"
-              maxCount={60}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="比如：新加坡首店 3 个月回本的模型，以及瓶装茶进 KA 的计划"
-              error={noteError}
-              disabled={!ready}
-            />
-            <Button
-              variant="primary"
-              className="self-start"
-              disabled={!ready}
-              onClick={() => {
-                setTried(true);
-                if (note.trim().length < 10) return;
-                applyDemoDay(dd.id, project.id, note.trim());
-                toast({ tone: "success", title: "报名成功", body: "截止后公布入围名单，结果会通知你" });
-              }}
-            >
-              报名{dd.title}
-            </Button>
-          </div>
-        )}
-
-        {past.length ? (
-          <div className="border-t border-gray-100 pt-3 text-xs text-gray-500">
-            参加过：{past.map((d) => d.title).join("、")}
-          </div>
-        ) : null}
-      </Card>
-
-      <Card className="flex flex-col gap-4">
-        <div className="flex items-start gap-3">
           <FeaturedIcon icon={Award} tone="success" />
           <div className="min-w-0">
             <h3 className="text-base font-semibold text-gray-900">项目徽章</h3>
@@ -437,7 +331,7 @@ export function ExposurePanel({ project, onTab }: { project: Project; onTab: (t:
           </div>
         </div>
         <ul className="flex flex-col gap-2">
-          {["pitch_featured", "demoday_shortlist", "demoday_top3", "fast_responder"].map((id) => {
+          {["followers_100", "fast_responder"].map((id) => {
             const b = BADGES[id];
             const has = project.badges.includes(id);
             return (
@@ -465,12 +359,6 @@ export function WallBadge({ wall }: { wall: Project["wall"] }) {
     default:
       return <Badge tone="gray">未上发现页</Badge>;
   }
-}
-
-function EntryBadge({ status }: { status: "applied" | "shortlisted" | "rejected" }) {
-  if (status === "shortlisted") return <Badge tone="highlight">已入围</Badge>;
-  if (status === "applied") return <Badge tone="warning" dot>待筛选</Badge>;
-  return <Badge tone="gray">未入围</Badge>;
 }
 
 /* ------------------------------------------------------------------ 分享物料 */

@@ -1,10 +1,9 @@
 "use client";
 
-import { Award, Check, Gift, type LucideIcon, Megaphone, PenLine, RefreshCw, Send, Vote } from "lucide-react";
+import { Award, Check, Gift, type LucideIcon, Megaphone, PenLine, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { demoState } from "@/components/biz/demo-day";
 import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, EmptyState, FeaturedIcon, PageHeader, ProgressBar } from "@/components/ui/display";
@@ -14,10 +13,9 @@ import type { Contribution, ContributionAction, DB, Person } from "@/data/types"
 import { cn } from "@/lib/cn";
 import { useHashScroll } from "@/lib/use-hash-scroll";
 import { useApp } from "@/store/app-store";
-import { bestContributionMonth, currentDemoDay, followerCount, manageableProjects, personBadges, useDB, useQuota, useViewer } from "@/store/selectors";
+import { bestContributionMonth, followerCount, manageableProjects, personBadges, useDB, useQuota, useViewer } from "@/store/selectors";
 
 const TASK_ICON: Record<ContributionAction, LucideIcon> = {
-  vote: Vote,
   update: Megaphone,
   status_refresh: RefreshCw,
 };
@@ -36,7 +34,7 @@ function RewardsView() {
   if (!viewer) {
     return (
       <Page narrow>
-        <PageHeader title="任务中心" desc="为路演投票、发布动态、刷新开放状态，每类每月第一次完成，意向次数 +1。" />
+        <PageHeader title="任务中心" desc="发布动态、刷新开放状态，每类每月第一次完成，意向次数 +1。" />
         <Card padded={false} className="mt-6">
           <EmptyState
             icon={Gift}
@@ -75,7 +73,7 @@ function RewardsBody({ viewer }: { viewer: Person }) {
 
   return (
     <Page>
-      <PageHeader title="任务中心" desc="为路演投票、发布动态、刷新开放状态，每类每月第一次完成，本月意向次数 +1。" />
+      <PageHeader title="任务中心" desc="发布动态、刷新开放状态，每类每月第一次完成，本月意向次数 +1。" />
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -215,14 +213,10 @@ interface TaskRow {
 
 function taskList(db: DB, viewer: Person): TaskRow[] {
   const myProjects = manageableProjects(db, viewer.id);
-  const dd = currentDemoDay(db);
-  const voting = dd ? demoState(db, dd).votingOpen : false;
 
   return CONTRIBUTION_TASKS.map((t): TaskRow => {
     const base = { action: t.action, label: t.label, desc: t.desc };
     switch (t.action) {
-      case "vote":
-        return voting && dd ? { ...base, hint: `${dd.title}正在投票。`, cta: { label: "去投票", href: "/demo-day" } } : { ...base, hint: "本月路演投票还没开放，开放时会通知你。" };
       case "update":
         if (!myProjects.length) {
           return viewer.role === "founder" || !viewer.role ? { ...base, na: "创建项目后才能完成", cta: { label: "创建项目", onClick: () => useApp.getState().openCreate() } } : { ...base, na: "需要有自己管理的项目" };
@@ -274,7 +268,7 @@ function BadgesCard({ db, viewer }: { db: DB; viewer: Person }) {
             </Link>
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {["pitch_featured", "demoday_shortlist", "demoday_top3", "fast_responder"].map((id) => {
+            {["followers_100", "fast_responder"].map((id) => {
               const b = BADGES[id];
               const on = p.badges.includes(id);
               return (

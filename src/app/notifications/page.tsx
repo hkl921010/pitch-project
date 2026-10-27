@@ -14,7 +14,6 @@ import {
   Send,
   Settings2,
   Shield,
-  Trophy,
   UserPlus,
   type LucideIcon,
 } from "lucide-react";
@@ -42,7 +41,6 @@ const ICON: Record<NotificationType, { icon: LucideIcon; cls: string }> = {
   member: { icon: UserPlus, cls: "bg-success-50 text-success-600" },
   officehours: { icon: CalendarClock, cls: "bg-success-50 text-success-600" },
   update: { icon: Megaphone, cls: "bg-gray-100 text-gray-600" },
-  demoday: { icon: Trophy, cls: "bg-highlight-soft text-highlight-ink" },
   reward: { icon: Gift, cls: "bg-highlight-soft text-highlight-ink" },
   system: { icon: Shield, cls: "bg-gray-100 text-gray-600" },
 };
@@ -215,7 +213,7 @@ function Notifications() {
                   ? `${digest.project.name}本周浏览 ${digest.views}，${digest.pending.length ? `${digest.pending.length} 条意向待回应` : "意向都已处理"}。`
                   : digest?.kind === "investor"
                     ? `观察清单 ${digest.fresh.length} 个项目有新动态，${digest.matches.length} 个符合偏好的新项目。`
-                    : "本周值得看的项目、需求和活动。"}
+                    : "本周值得看的项目和需求。"}
             </p>
             <p className="mt-2 text-xs text-gray-400">下一期 {formatDateTime(period.send)}</p>
             <Button size="sm" variant="secondary" iconLeft={Mail} href="/digest/preview" className="mt-3">

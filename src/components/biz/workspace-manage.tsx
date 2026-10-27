@@ -313,7 +313,7 @@ export function UpdatesPanel({ project }: { project: Project }) {
         <Card className="flex flex-col gap-4">
           <div>
             <h3 className="text-base font-semibold text-gray-900">发一条动态</h3>
-            <p className="text-sm text-gray-500">选个模板，30 秒写完。会出现在项目页时间线和关注者的信息流里</p>
+            <p className="text-sm text-gray-500">选个模板，30 秒写完。会出现在项目页时间线，关注这个项目的人也会看到。</p>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {(Object.keys(UPDATE_TEMPLATES) as UpdateTemplate[]).map((t) => (
@@ -397,7 +397,7 @@ export function UpdatesPanel({ project }: { project: Project }) {
         onClose={() => setDeleting(null)}
         danger
         title="删除这条动态？"
-        desc="项目页和信息流里都会删掉，已经发出的提醒无法撤回。"
+        desc="项目页上会删掉，已经发出的提醒无法撤回。"
         confirmText="删除"
         onConfirm={() => {
           if (deleting) del(project.id, deleting);

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookmarkCheck, ChevronDown, Eye, Globe, Link2, LayoutDashboard, Lock, MapPin, PenLine, Plus, Share2, Users } from "lucide-react";
+import { Bookmark, BookmarkCheck, ChevronDown, ChevronLeft, ChevronRight, Eye, Globe, Link2, LayoutDashboard, Lock, MapPin, PenLine, Plus, Share2, Users } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
@@ -19,7 +19,6 @@ import { Page } from "@/components/shell/page";
 import { Button } from "@/components/ui/button";
 import { Segmented } from "@/components/ui/tabs";
 import { Avatar, Badge, Card, EmptyState, ProgressRing, ProjectLogo, Tag, Tooltip } from "@/components/ui/display";
-import { TONES } from "@/data/constants";
 import { formatDate } from "@/data/time";
 import type { IntentKind, NeedItem, Project, TrafficSource } from "@/data/types";
 import { cn } from "@/lib/cn";
@@ -156,25 +155,22 @@ function ProjectView() {
           />
         </div>
         {layout === "now" ? (
-          <>
-        <IntroHero
-          project={p}
-          badges={badges}
-          followers={followerCount(db, "project", p.id)}
-          canEdit={canEdit}
-          isMember={isMember}
-          watching={watching}
-          showWatch={viewer?.role === "investor"}
-          onWatch={() => {
-            toggleWatch(p.id);
-            toast({ tone: "success", title: watching ? "已移出观察清单" : "已加入观察清单", body: watching ? undefined : "项目更新时会提醒你，可以在清单里写私人备注" });
-          }}
-          onShare={share}
-        />
-
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-10">
-            <ProjectAbout project={p} />
+            <DetailLead
+              project={p}
+              badges={badges}
+              followers={followerCount(db, "project", p.id)}
+              canEdit={canEdit}
+              isMember={isMember}
+              watching={watching}
+              showWatch={viewer?.role === "investor"}
+              onWatch={() => {
+                toggleWatch(p.id);
+                toast({ tone: "success", title: watching ? "已移出观察清单" : "已加入观察清单", body: watching ? undefined : "项目更新时会提醒你，可以在清单里写私人备注" });
+              }}
+              onShare={share}
+            />
 
             <Section id="looking" title="寻找合作" desc="点开看找谁、怎么合作。">
               {cooperations.length ? (
@@ -278,7 +274,6 @@ function ProjectView() {
             ) : null}
           </aside>
         </div>
-          </>
         ) : layout === "plain" ? (
           <ProjectPlainDetail />
         ) : layout === "mini" ? (
@@ -388,56 +383,8 @@ function coopAction(n: NeedItem) {
   return "我能合作";
 }
 
-/** 项目简介。有长文或图片才出现，放在寻找合作前面。默认收起，点开才看；地址带 #profile 时直接打开。 */
-function ProjectAbout({ project: p }: { project: Project }) {
-  const images = p.gallery.filter((g) => g.image);
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const sync = () => {
-      if (decodeURIComponent(window.location.hash.slice(1)) === "profile") setOpen(true);
-    };
-    sync();
-    window.addEventListener("hashchange", sync);
-    return () => window.removeEventListener("hashchange", sync);
-  }, []);
-  if (!p.profile && !images.length) return null;
-  const preview = (p.profile ?? "").split("\n").map((line) => line.trim()).find(Boolean) ?? "点开看项目图片";
-  return (
-    <section id="profile" className="scroll-mt-24 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <button type="button" className="flex w-full items-center gap-3 px-4 py-4 text-left sm:px-5" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <span className="min-w-0 flex-1">
-          <span className="block text-base font-semibold text-gray-900">项目简介</span>
-          {open ? null : <span className="mt-0.5 block truncate text-sm text-gray-500">{preview}</span>}
-        </span>
-        {!open && images.length ? (
-          <span className="hidden shrink-0 items-center gap-1 sm:flex" aria-hidden>
-            {images.slice(0, 3).map((g) => (
-              <img key={g.id} src={g.image} alt="" className="h-10 w-14 rounded-md object-cover" />
-            ))}
-          </span>
-        ) : null}
-        <ChevronDown size={18} className={cn("shrink-0 text-gray-400 transition-transform", open && "rotate-180")} />
-      </button>
-      {open ? (
-        <div className="border-t border-gray-100 px-4 py-4 sm:px-5">
-          {p.profile ? <p className="text-sm leading-6 whitespace-pre-line text-gray-800">{p.profile}</p> : null}
-          {images.length ? (
-            <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", p.profile && "mt-4")}>
-              {images.map((g) => (
-                <figure key={g.id} className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                  <img src={g.image} alt={g.caption} className="w-full" />
-                  <figcaption className="bg-white px-3 py-2 text-sm text-gray-600">{g.caption}</figcaption>
-                </figure>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function IntroHero({
+/** 现在这版的页头，沿用简介亮点：白底，简介、产品、项目亮点、为什么是我们。 */
+function DetailLead({
   project: p,
   badges,
   followers,
@@ -458,28 +405,23 @@ function IntroHero({
   onWatch: () => void;
   onShare: () => void;
 }) {
-  const tone = TONES[p.coverTone % TONES.length];
-  const about = [
-    { title: "在做什么", body: p.intro },
-    { title: "在卖什么", body: p.product },
-    { title: "凭什么", body: p.edge },
-  ].filter((x) => x.body);
+  const highlights = p.highlights?.filter(Boolean) ?? [];
   return (
-    <section className="overflow-hidden rounded-2xl" style={{ background: `linear-gradient(135deg, ${tone.from} 0%, ${tone.to} 100%)` }}>
-      <div className="flex flex-col gap-6 p-5 sm:p-8">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-          <ProjectLogo text={p.logoText} tone={p.logoTone} image={p.logoImage} size="2xl" className="ring-4 ring-white/80" />
+    <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <header className="flex flex-col gap-5 p-5 sm:p-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <ProjectLogo text={p.logoText} tone={p.logoTone} image={p.logoImage} size="xl" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{p.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{p.name}</h1>
               {badges.map((b) => (
                 <Tooltip key={b.id} content={b.desc}>
                   <Badge tone={b.tone}>{b.label}</Badge>
                 </Tooltip>
               ))}
             </div>
-            <p className="mt-1.5 text-lg text-white/90">{p.oneLiner}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/85">
+            <p className="mt-1.5 text-base text-gray-600">{p.oneLiner}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-500">
               <Tag>{p.track}</Tag>
               {p.tags.map((t) => (
                 <Tag key={t}>{t}</Tag>
@@ -489,7 +431,7 @@ function IntroHero({
                 {p.region || "未填写地区"}
               </span>
               {p.website ? (
-                <a className="inline-flex items-center gap-1 hover:text-white" href={`https://${p.website}`} target="_blank" rel="noreferrer">
+                <a className="inline-flex items-center gap-1 hover:text-gray-800" href={`https://${p.website}`} target="_blank" rel="noreferrer">
                   <Globe size={14} />
                   {p.website}
                 </a>
@@ -510,22 +452,152 @@ function IntroHero({
             <Button variant="secondary" iconOnly={Share2} aria-label="分享" onClick={onShare} />
           </div>
         </div>
-        <div className="rounded-xl bg-white p-5 sm:p-6">
-          {about.length ? (
-            <div className="flex flex-col gap-5">
-              {about.map((x) => (
-                <div key={x.title}>
-                  <h2 className="text-sm font-semibold text-gray-900">{x.title}</h2>
-                  <p className="mt-1.5 text-[15px] leading-7 whitespace-pre-line text-gray-700">{x.body}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#about`} title="项目介绍还是空的" cta="补充介绍" desc="先写清在做什么、在卖什么、凭什么" />
-          )}
-          <KnownSignal targetType="project" targetId={p.id} className="mt-5" />
+        <KnownSignal targetType="project" targetId={p.id} />
+      </header>
+
+      <ShotCarousel project={p} />
+
+      <LeadBlock title="简介">
+        {p.intro || p.product ? (
+          <div className="flex flex-col gap-4">
+            {p.intro ? <p className="text-sm leading-6 whitespace-pre-line text-gray-800">{p.intro}</p> : null}
+            {p.product ? (
+              <div>
+                <p className="text-xs text-gray-400">产品</p>
+                <p className="mt-1 text-sm leading-6 whitespace-pre-line text-gray-800">{p.product}</p>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <EmptyBox canEdit={canEdit} href={`/p/${p.slug}/edit#about`} title="简介还是空的" cta="去写简介" desc="先用几句话讲清这个项目是做什么的" />
+        )}
+      </LeadBlock>
+
+      {highlights.length || p.edge ? (
+        <div className="grid grid-cols-1 border-t border-gray-100 sm:grid-cols-2">
+          {highlights.length ? (
+            <LeadBlock title="项目亮点" className={cn("border-t-0", p.edge ? "sm:border-r sm:border-gray-100" : "sm:col-span-2")}>
+              <ol className="flex flex-col gap-3">
+                {highlights.map((item, i) => (
+                  <li key={item} className="flex gap-3 text-sm leading-6 text-gray-800">
+                    <span className="w-5 shrink-0 tabular-nums text-gray-400">{String(i + 1).padStart(2, "0")}</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ol>
+            </LeadBlock>
+          ) : null}
+          {p.edge ? (
+            <LeadBlock title="为什么是我们" className={highlights.length ? "sm:border-t-0" : "border-t-0 sm:col-span-2"}>
+              <p className="text-sm leading-6 whitespace-pre-line text-gray-800">{p.edge}</p>
+            </LeadBlock>
+          ) : null}
         </div>
+      ) : null}
+
+      <Supplement project={p} />
+    </article>
+  );
+}
+
+function LeadBlock({ title, className, children }: { title: string; className?: string; children: ReactNode }) {
+  return (
+    <section className={cn("border-t border-gray-100 px-5 py-6 sm:px-7", className)}>
+      <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+/** 项目图片轮播，放在简介上面。一次只露一张，可以点、滑、或点圆点切换。 */
+function ShotCarousel({ project: p }: { project: Project }) {
+  const images = p.gallery.flatMap((g) => (g.image ? [{ id: g.id, image: g.image, caption: g.caption }] : []));
+  const scroller = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    setIndex(0);
+    scroller.current?.scrollTo({ left: 0 });
+  }, [p.id]);
+  if (!images.length) return null;
+  const go = (next: number) => {
+    const el = scroller.current;
+    if (!el) return;
+    const i = (next + images.length) % images.length;
+    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+  };
+  return (
+    <section className="border-t border-gray-100 px-5 py-6 sm:px-7" aria-roledescription="carousel" aria-label="项目图片">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-900">图片</h2>
+        {images.length > 1 ? <span className="text-xs tabular-nums text-gray-400">{index + 1} / {images.length}</span> : null}
       </div>
+      <div className="relative">
+        <div
+          ref={scroller}
+          className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto rounded-xl border border-[#e2e8f0]"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            if (!el.clientWidth) return;
+            const next = Math.round(el.scrollLeft / el.clientWidth);
+            setIndex(Math.min(images.length - 1, Math.max(0, next)));
+          }}
+        >
+          {images.map((image) => (
+            <img key={image.id} src={image.image} alt={image.caption} className="aspect-video w-full min-w-full shrink-0 snap-start object-cover" />
+          ))}
+        </div>
+        {images.length > 1 ? (
+          <>
+            <button type="button" aria-label="上一张" className="absolute top-1/2 left-2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm" onClick={() => go(index - 1)}>
+              <ChevronLeft size={18} />
+            </button>
+            <button type="button" aria-label="下一张" className="absolute top-1/2 right-2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm" onClick={() => go(index + 1)}>
+              <ChevronRight size={18} />
+            </button>
+          </>
+        ) : null}
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <p className="min-w-0 truncate text-xs text-[#64748b]">{images[index]?.caption}</p>
+        {images.length > 1 ? (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {images.map((image, i) => (
+              <button key={image.id} type="button" aria-label={`第 ${i + 1} 张`} className={cn("h-1.5 rounded-full", i === index ? "w-4 bg-gray-900" : "w-1.5 bg-gray-300")} onClick={() => go(i)} />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/** 更长的介绍。图片已经单独展示，这里只留文字。默认收起，地址带 #profile 时打开。 */
+function Supplement({ project: p }: { project: Project }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const sync = () => {
+      if (decodeURIComponent(window.location.hash.slice(1)) === "profile") setOpen(true);
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  if (!p.profile) return null;
+  const preview = p.profile.split("\n").map((line) => line.trim()).find(Boolean) ?? "";
+  return (
+    <section id="profile" className="scroll-mt-24 border-t border-gray-100">
+      <button type="button" className="flex w-full items-center gap-3 px-5 py-4 text-left sm:px-7" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-gray-900">补充说明</span>
+          {open || !preview ? null : <span className="mt-0.5 block truncate text-sm text-gray-500">{preview}</span>}
+        </span>
+        <ChevronDown size={16} className={cn("shrink-0 text-gray-400 transition-transform", open && "rotate-180")} />
+      </button>
+      {open ? (
+        <div className="px-5 pb-6 sm:px-7">
+          <p className="text-sm leading-6 whitespace-pre-line text-gray-800">{p.profile}</p>
+        </div>
+      ) : null}
     </section>
   );
 }

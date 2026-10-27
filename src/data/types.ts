@@ -251,75 +251,7 @@ export interface WatchItem {
   seenAt: string;
 }
 
-export interface PitchEvent {
-  id: string;
-  title: string;
-  kind: "online" | "offline";
-  start: string;
-  end: string;
-  city?: string;
-  venue?: string;
-  coverTone: number;
-  host: string;
-  desc: string;
-  speakerIds: string[];
-  projectIds: string[];
-  attendeeIds: string[];
-  presentIds: string[];
-  /** 线下活动的名额；线上不限。 */
-  capacity?: number;
-  demoDayId?: string;
-  agenda: { time: string; title: string }[];
-  /** 活动结束后的回顾：回放时长或纪要，以及关联的报道。 */
-  recap?: { summary: string; replayMins?: number; articleId?: string };
-}
-
-export interface Article {
-  id: string;
-  title: string;
-  column: string;
-  author: string;
-  summary: string;
-  coverTone: number;
-  at: string;
-  projectIds: string[];
-  readMins: number;
-}
-
-export interface NewsItem {
-  id: string;
-  title: string;
-  source: string;
-  summary: string;
-  tag: string;
-  at: string;
-  projectId?: string;
-}
-
-export interface DemoDayEntry {
-  projectId: string;
-  status: "applied" | "shortlisted" | "rejected";
-  appliedAt: string;
-  pitchNote: string;
-  opsNote?: string;
-}
-
-export interface DemoDay {
-  id: string;
-  month: string;
-  title: string;
-  theme: string;
-  status: "open" | "ended";
-  applyDeadline: string;
-  randomUntil: string;
-  eventId: string;
-  entries: DemoDayEntry[];
-  votes: Record<string, string[]>;
-  results?: string[];
-  recap?: { viewers: number; intents: number; matches: number; quote: string };
-}
-
-export type NotificationType = "intent" | "conversation" | "update" | "demoday" | "member" | "officehours" | "system" | "reward";
+export type NotificationType = "intent" | "conversation" | "update" | "member" | "officehours" | "system" | "reward";
 
 export interface Notification {
   id: string;
@@ -350,7 +282,7 @@ export interface NotifyPrefs {
   lastTestAt?: string;
 }
 
-export type ContributionAction = "vote" | "update" | "status_refresh";
+export type ContributionAction = "update" | "status_refresh";
 
 export interface Contribution {
   id: string;
@@ -389,10 +321,6 @@ export interface DB {
   conversations: Conversation[];
   follows: Follow[];
   watch: WatchItem[];
-  events: PitchEvent[];
-  articles: Article[];
-  news: NewsItem[];
-  demoDays: DemoDay[];
   notifications: Notification[];
   notifyPrefs: NotifyPrefs[];
   contributions: Contribution[];

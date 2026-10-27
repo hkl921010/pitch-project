@@ -4,14 +4,10 @@ import { seedPeople } from "./seed-people";
 import { seedProjects } from "./seed-projects";
 import {
   FOLLOWER_BASE,
-  seedArticles,
   seedContributions,
   seedConversations,
-  seedDemoDays,
-  seedEvents,
   seedFollows,
   seedIntents,
-  seedNews,
   seedNotifications,
   seedNotifyPrefs,
   seedOfficeHours,
@@ -27,10 +23,6 @@ export function createSeed(): DB {
     conversations: clone(seedConversations),
     follows: clone(seedFollows),
     watch: clone(seedWatch),
-    events: clone(seedEvents),
-    articles: clone(seedArticles),
-    news: clone(seedNews),
-    demoDays: clone(seedDemoDays),
     notifications: clone(seedNotifications).map((n) => {
       const prefs = seedNotifyPrefs.find((p) => p.userId === n.userId);
       return { ...n, pushed: !!prefs && prefs.wechatBound && prefs.wechatOn && prefs.instant.includes(n.type) };

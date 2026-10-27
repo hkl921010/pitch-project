@@ -431,7 +431,7 @@ export const seedPeople: Person[] = [
     title: "Pitch 社区运营",
     org: "Pitch",
     city: "深圳",
-    bio: "负责项目撮合和月度路演。有任何合作需要，在对话里点「请 Pitch 帮忙撮合」就能找到我。",
+    bio: "负责项目撮合。有任何合作需要，在对话里点「请 Pitch 帮忙撮合」就能找到我。",
     openStatus: { active: false, headline: "", updatedAt: ago(1) },
     contact: {},
     isMember: true,

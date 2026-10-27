@@ -4,7 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import { BADGES, INTENT_KIND_LABEL, ROLE_LABEL, TOP_CONTRIBUTOR_TASKS } from "@/data/constants";
 import { monthOf, nowMs } from "@/data/time";
-import type { Conversation, ConversationStatus, DB, DemoDay, Intent, Person, PitchEvent, Project, ProjectUpdate, WatchItem } from "@/data/types";
+import type { Conversation, ConversationStatus, DB, Intent, Person, Project, ProjectUpdate, WatchItem } from "@/data/types";
 import { computeQuota, useApp } from "./app-store";
 
 export function useDB(): DB {
@@ -229,15 +229,6 @@ export function responseLabel(hours: number | null): { label: string; tone: "suc
   return { label: "回复较慢", tone: "gray" };
 }
 
-/** 活动状态以原型固定时间为准，保证“正在直播”稳定可演示。 */
-export function eventStatus(ev: PitchEvent): "live" | "upcoming" | "ended" {
-  const now = nowMs();
-  const s = new Date(ev.start).getTime();
-  const e = new Date(ev.end).getTime();
-  if (now >= s && now <= e) return "live";
-  return now < s ? "upcoming" : "ended";
-}
-
 /** 观察清单里，自上次查看后有新动态的项目。 */
 export function watchUpdates(db: DB, viewerId: string | null): { item: WatchItem; project: Project; fresh: ProjectUpdate[] }[] {
   if (!viewerId) return [];
@@ -249,11 +240,6 @@ export function watchUpdates(db: DB, viewerId: string | null): { item: WatchItem
       return { item, project, fresh };
     })
     .filter((x) => x.project);
-}
-
-/** 当月开放中的路演。 */
-export function currentDemoDay(db: DB): DemoDay | undefined {
-  return db.demoDays.find((d) => d.status === "open");
 }
 
 export interface FirstStep {
@@ -298,7 +284,7 @@ export function firstSteps(db: DB, viewer: Person): FirstStep[] {
     }
     case "investor":
       return [
-        { key: "pref", title: "设置投资偏好", desc: "赛道、阶段、单笔金额，匹配的项目会优先出现在首页和周报", done: !!viewer.openStatus.investor?.tracks.length, href: `/u/${viewer.handle}?edit=status`, cta: "去设置" },
+        { key: "pref", title: "设置投资偏好", desc: "赛道、阶段、单笔金额，匹配的项目会优先出现在「我的」和周报", done: !!viewer.openStatus.investor?.tracks.length, href: `/u/${viewer.handle}?edit=status`, cta: "去设置" },
         { key: "watch", title: "收藏 3 个项目到观察清单", desc: "项目更新时会提醒你，备注只有你自己能看到", done: db.watch.filter((w) => w.userId === viewer.id).length >= 3, href: "/discover", cta: "去发现页" },
         { key: "oh", title: "开放一个答疑时段", desc: "创始人可以预约 20 分钟，是最轻的看项目方式", done: db.officeHours.some((s) => s.hostId === viewer.id), href: "/office-hours?tab=hosting&create=1", cta: "开放时段" },
       ];

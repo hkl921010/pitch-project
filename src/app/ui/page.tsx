@@ -130,7 +130,7 @@ export default function UIKit() {
           <Card>
             <SectionHeader title="流量来源" />
             <div className="mt-4">
-              <BarList items={[{ label: "微信转发", value: 420 }, { label: "发现页", value: 260 }, { label: "月度路演", value: 120 }, { label: "海报扫码", value: 80 }]} />
+              <BarList items={[{ label: "微信转发", value: 420 }, { label: "发现页", value: 260 }, { label: "直接访问", value: 120 }, { label: "海报扫码", value: 80 }]} />
             </div>
           </Card>
         </section>

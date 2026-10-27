@@ -40,7 +40,7 @@ export default function DigestPreviewPage() {
 function subjectOf(d: DigestData) {
   if (d.kind === "founder") return `【Pitch 周报】${d.project.name}本周浏览 ${d.views}${d.pending.length ? `，${d.pending.length} 条意向待回应` : ""}`;
   if (d.kind === "investor") return d.fresh.length ? `【Pitch 周报】观察清单里 ${d.fresh.length} 个项目有新动态` : `【Pitch 周报】本周 ${d.matches.length} 个符合你偏好的项目`;
-  return "【Pitch 精选】本周值得看的项目、需求和活动";
+  return "【Pitch 精选】本周值得看的项目和需求";
 }
 
 function Preview() {

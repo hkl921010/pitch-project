@@ -5,7 +5,7 @@ import { Suspense, useMemo, useState } from "react";
 
 import { PersonCard } from "@/components/biz/person-card";
 import { ProjectCard, ProjectCardSkeleton } from "@/components/biz/project-card";
-import { Page } from "@/components/shell/page";
+import { AcademyFrame } from "@/components/shell/academy-frame";
 import { Button } from "@/components/ui/button";
 import { Card, EmptyState, ProjectLogo } from "@/components/ui/display";
 import { Input, Select, Toggle } from "@/components/ui/form";
@@ -33,11 +33,7 @@ function Discover() {
   const visibleProjects = db.projects.filter((p) => p.visibility === "public" && p.wall === "approved");
   const people = db.people.filter((p) => p.onboarded && !p.isOps);
   return (
-    <Page>
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-[28px]">发现</h1>
-        <p className="text-[15px] text-gray-500">找项目和人，熟人关注过的会排在前面。</p>
-      </div>
+    <AcademyFrame eyebrow="发现" title="找项目，找人" desc="熟人关注过的会排在前面。">
       <Tabs
         className="mt-6"
         value={tab}
@@ -51,7 +47,7 @@ function Discover() {
         {tab === "projects" ? <ProjectsTab projects={visibleProjects} /> : null}
         {tab === "people" ? <PeopleTab /> : null}
       </div>
-    </Page>
+    </AcademyFrame>
   );
 }
 
@@ -94,7 +90,7 @@ function ProjectsTab({ projects }: { projects: Project[] }) {
   return (
     <div className="flex flex-col gap-5">
       {pendingMine.map((p) => (
-        <div key={p.id} className="flex flex-col gap-3 rounded-xl border border-brand-200 bg-brand-25 p-4 sm:flex-row sm:items-center">
+        <div key={p.id} className="flex flex-col gap-3 border border-black/10 bg-[#f7fbf3] p-4 sm:flex-row sm:items-center">
           <span className="flex items-center gap-3">
             <ProjectLogo text={p.logoText} tone={p.logoTone} size="sm" />
             <span className="text-sm text-gray-700">
@@ -148,8 +144,8 @@ function ProjectsTab({ projects }: { projects: Project[] }) {
               key={t}
               onClick={() => setTrack(t)}
               className={cn(
-                "flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors",
-                on ? "border-gray-900 bg-gray-900 text-white" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300",
+                "flex h-9 shrink-0 items-center gap-1.5 border px-3 text-sm font-medium transition-colors",
+                on ? "border-black bg-black text-white" : "border-black/10 bg-white text-gray-600 hover:border-black",
               )}
             >
               {t === "all" ? "全部赛道" : t}

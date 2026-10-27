@@ -195,7 +195,7 @@ export default function WelcomePage() {
                   主页已生成
                 </Badge>
                 <h1 className="mt-4 text-2xl font-semibold text-gray-900 sm:text-[28px]">接下来，先做这 3 件事</h1>
-                <p className="mt-2 text-gray-500">它们会一直留在首页顶部，做完自动打勾。</p>
+                <p className="mt-2 text-gray-500">它们会一直留在「我的」顶部，做完自动打勾。</p>
                 <ol className="mt-6 flex flex-col gap-3">
                   {steps.map((s, i) => (
                     <li key={s.key} className={cn("flex items-start gap-4 rounded-xl border border-gray-200 p-4 shadow-xs", s.done ? "bg-gray-25" : "bg-white")}>
@@ -211,7 +211,7 @@ export default function WelcomePage() {
                           size="sm"
                           variant={i === 0 ? "primary" : "secondary"}
                           onClick={() => {
-                            router.push("/");
+                            router.push("/me");
                             openCreate();
                           }}
                         >
@@ -229,7 +229,7 @@ export default function WelcomePage() {
                   <Button variant="secondary" size="lg" href={`/u/${viewer.handle}`}>
                     看看我的主页
                   </Button>
-                  <Button variant="primary" size="lg" iconRight={ArrowRight} href="/">
+                  <Button variant="primary" size="lg" iconRight={ArrowRight} href="/me">
                     进入 Pitch
                   </Button>
                 </div>
@@ -275,7 +275,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-[15px] font-black text-highlight">P</span>
           <span className="text-lg font-bold text-gray-900">Pitch</span>
         </Link>
-        <Link href="/" className="text-sm font-medium text-gray-500 hover:text-gray-700">
+        <Link href="/me" className="text-sm font-medium text-gray-500 hover:text-gray-700">
           稍后再说
         </Link>
       </header>

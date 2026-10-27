@@ -104,7 +104,6 @@ export const NOTIFICATION_TYPES: Record<NotificationType, { label: string; group
   member: { label: "成员邀请", group: "deal", desc: "邀请你加入项目，或对方确认了邀请" },
   officehours: { label: "答疑预约", group: "deal", desc: "预约、确认和开始前提醒" },
   update: { label: "项目动态", group: "project", desc: "关注和观察的项目发布了动态" },
-  demoday: { label: "月度路演", group: "project", desc: "入围、投票开放和结果" },
   reward: { label: "奖励", group: "me", desc: "贡献任务完成、获得徽章" },
   system: { label: "系统", group: "system", desc: "审核结果和账号相关的通知" },
 };
@@ -123,8 +122,8 @@ export const SOURCE_LABEL: Record<TrafficSource, string> = {
   moments: "朋友圈",
   poster: "海报扫码",
   discover: "发现页",
-  demoday: "月度路演",
-  article: "Pitch 报道",
+  demoday: "其他渠道",
+  article: "外部报道",
   direct: "直接访问",
 };
 
@@ -136,9 +135,6 @@ export interface BadgeDef {
 }
 
 export const BADGES: Record<string, BadgeDef> = {
-  demoday_top3: { id: "demoday_top3", label: "月度路演前三", desc: "在月度路演中投票排名前三", tone: "highlight" },
-  demoday_shortlist: { id: "demoday_shortlist", label: "路演入围", desc: "入围 Pitch 月度路演", tone: "brand" },
-  pitch_featured: { id: "pitch_featured", label: "Pitch 报道", desc: "被 Pitch 专栏报道过", tone: "brand" },
   followers_100: { id: "followers_100", label: "100 关注", desc: "获得 100 位用户关注", tone: "success" },
   fast_responder: { id: "fast_responder", label: "回复迅速", desc: "近 30 天意向平均 24 小时内回复", tone: "blue" },
   top_contributor: { id: "top_contributor", label: "社区贡献者", desc: "单月完成至少 3 项贡献任务", tone: "highlight" },
@@ -152,14 +148,10 @@ export const MATCH_STAGE: Record<MatchStage, { label: string; tone: "brand" | "b
   lost: { label: "未成交", tone: "gray" },
 };
 
-/** 每期路演每人最多投的票数；可以撤回改投，路演结束后锁定。 */
-export const DEMO_VOTES = 3;
-
 /** 非会员每月免费意向次数；贡献任务每完成一项额外 +1。 */
 export const MONTHLY_FREE_INTENTS = 5;
 
 export const CONTRIBUTION_TASKS = [
-  { action: "vote", label: "在本月路演为项目投票", desc: "不能投自己参与的项目，撤回不会扣回奖励", reward: 1 },
   { action: "update", label: "为你的项目发布一条动态", desc: "关注者和观察这个项目的投资人会收到提醒", reward: 1 },
   { action: "status_refresh", label: "刷新本月的开放状态", desc: "让别人知道你现在在找什么、能提供什么", reward: 1 },
 ] as const;

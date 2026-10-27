@@ -184,7 +184,7 @@ function AltView({ embed = false }: { embed?: boolean }) {
 
             <More project={p} />
 
-            <Block title="合作方式" desc="点开看合作对象和条件。">
+            <Block title="合作方式" desc="每条都能直接发起，点开再看条件。">
               {cooperations.length ? (
                 <div className="-mx-5 sm:-mx-7">
                   {cooperations.map((n) => (
@@ -204,7 +204,7 @@ function AltView({ embed = false }: { embed?: boolean }) {
             </Block>
 
             {services.length || canEdit ? (
-              <Block title="需要的服务" desc="自己出钱买的。点开看内容和收费。">
+              <Block title="需要的服务" desc="自己出钱买的。每条都能直接发起，点开再看怎么收费。">
                 {services.length ? (
                   <div className="-mx-5 sm:-mx-7">
                     {services.map((n) => (
@@ -401,7 +401,7 @@ function More({ project: p }: { project: Project }) {
   );
 }
 
-/** 一条合作或服务。收起看类别和一句话，点开看对象和条件。 */
+/** 一条合作或服务。按钮一直露在外面；点开才看对象和条件。 */
 function DealRow({
   need: n,
   leftLabel,
@@ -425,17 +425,27 @@ function DealRow({
     return () => window.removeEventListener("hashchange", sync);
   }, [n.id]);
   return (
-    <div id={`need-${n.id}`} className="scroll-mt-24 border-t border-gray-100">
-      <button type="button" className="flex w-full items-start gap-4 px-5 py-4 text-left sm:px-7" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        <span className="w-20 shrink-0 pt-0.5 text-xs text-gray-400">{needLabel(n)}</span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-gray-900">{n.title}</span>
-          {n.summary ? <span className="mt-0.5 block text-sm text-gray-600">{n.summary}</span> : null}
-        </span>
-        <ChevronDown size={16} className={cn("mt-0.5 shrink-0 text-gray-400 transition-transform", open && "rotate-180")} />
+    <div id={`need-${n.id}`} className="scroll-mt-24 border-t border-gray-100 px-5 py-4 sm:px-7">
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-4">
+          <span className="w-20 shrink-0 pt-0.5 text-xs text-gray-400">{needLabel(n)}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-gray-900">{n.title}</span>
+            {n.summary ? <span className="mt-0.5 block text-sm text-gray-600">{n.summary}</span> : null}
+          </span>
+        </div>
+        {action ? (
+          <Button size="sm" variant="primary" className="shrink-0" onClick={onAction}>
+            {action}
+          </Button>
+        ) : null}
+      </div>
+      <button type="button" className="mt-2 ml-24 inline-flex items-center gap-1 text-xs text-gray-500" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        {open ? "收起" : "展开"}
+        <ChevronDown size={14} className={cn("transition-transform", open && "rotate-180")} />
       </button>
       {open ? (
-        <div className="px-5 pb-5 sm:pr-7 sm:pl-[7.5rem]">
+        <div className="mt-3 ml-24">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <p className="text-xs text-gray-400">{leftLabel}</p>
@@ -456,11 +466,6 @@ function DealRow({
                 </figure>
               ))}
             </div>
-          ) : null}
-          {action ? (
-            <Button size="sm" variant="primary" className="mt-4" onClick={onAction}>
-              {action}
-            </Button>
           ) : null}
         </div>
       ) : null}

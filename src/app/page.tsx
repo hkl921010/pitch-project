@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { GuestAvatar } from "@/components/biz/guest-avatar";
+import { GuestReel, HeroStage, JourneyScroll } from "@/components/biz/portal-stage";
 import { PortalCompare } from "@/components/biz/portal-compare";
 import { Input } from "@/components/ui/form";
 import {
@@ -23,7 +24,6 @@ import {
   PORTAL_SECTIONS,
   PROMISES,
   QUESTIONS,
-  RHYTHM,
   ROADSHOWS,
   WHY,
   guestRoster,
@@ -112,37 +112,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        <div className="mx-auto mt-12 grid max-w-[1440px] gap-4 px-5 sm:px-10 lg:grid-cols-2">
-          <a href="#philosophy" className="rounded-3xl bg-white p-6 shadow-[0_12px_32px_rgba(16,24,40,0.06)] sm:p-8">
-            <p className="text-xs font-semibold tracking-[0.18em] text-[#1f6b12]">资本辅导</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">诊断、学习、路演</p>
-            <p className="mt-3 max-w-md text-sm leading-7 text-gray-500">六个月系统课。一线投资人把方法讲透，再带到真实路演里改。</p>
-            <p className="mt-6 text-sm font-semibold">进入课程</p>
-          </a>
-          <div className="rounded-3xl bg-white p-6 shadow-[0_12px_32px_rgba(16,24,40,0.06)] sm:p-8">
-            <p className="text-xs font-semibold tracking-[0.18em] text-[#1f6b12]">资源对接</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">项目、机构、嘉宾</p>
-            <p className="mt-3 max-w-md text-sm leading-7 text-gray-500">投递项目，或直接在平台上找正在开放的资源。</p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Link href="/discover" className="inline-flex h-10 items-center rounded-full bg-black px-4 text-sm font-semibold text-white">发现项目</Link>
-              <a href="#guests" className="inline-flex h-10 items-center rounded-full border border-black/10 px-4 text-sm font-semibold">嘉宾网络</a>
-            </div>
-            <div className="mt-6 flex gap-3">
-              {[
-                ["毛大庆", "优客工场"],
-                ["李竹", "英诺天使"],
-                ["吴世春", "梅花创投"],
-                ["吴欣鸿", "美图"],
-              ].map(([name, org]) => (
-                <a key={name} href="#guests" className="min-w-0 flex-1">
-                  <img src={GUEST_PHOTOS[name]} alt="" className="aspect-[4/5] w-full rounded-xl object-cover object-top" />
-                  <span className="mt-2 block truncate text-xs font-semibold">{name}</span>
-                  <span className="block truncate text-[11px] text-gray-500">{org}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
+        <HeroStage />
         <div className="mx-auto mt-14 grid max-w-[1440px] grid-cols-2 gap-3 px-5 pb-10 sm:px-10 lg:grid-cols-4">
           {HIGHLIGHTS.slice(0, 4).map((item) => (
             <div key={item.unit} className="rounded-2xl bg-white px-5 py-8 shadow-[0_8px_24px_rgba(16,24,40,0.06)] sm:px-8">
@@ -278,18 +248,10 @@ export default function HomePage() {
         </div>
       </Band>
 
-      <Band id="delivery" index="03" title="交付形式" statement="每一次集中授课，都包含一场真路演。" tone="mist">
-        <div className="grid gap-12 lg:grid-cols-4">
-          {RHYTHM.map((item, index) => (
-            <div key={item.title} className="rounded-2xl bg-white p-6 shadow-[0_8px_24px_rgba(16,24,40,0.05)]">
-              <p className="text-5xl font-semibold tracking-tight text-gray-300 tabular-nums">{String(index + 1).padStart(2, "0")}</p>
-              <p className="mt-4 text-xl font-semibold">{item.title}</p>
-              <p className="mt-3 text-sm leading-7 text-gray-600">{item.desc}</p>
-            </div>
-          ))}
-        </div>
+      <JourneyScroll />
 
-        <div className="mt-20 grid gap-4 lg:grid-cols-2">
+      <Band id="delivery" index="03" title="交付形式" statement="每一次集中授课，都包含一场真路演。" tone="mist">
+        <div className="grid gap-4 lg:grid-cols-2">
           {ROADSHOWS.map((item) => (
             <div key={item.title} className="rounded-3xl bg-[#070707] p-8 text-white shadow-[0_16px_40px_rgba(0,0,0,0.12)] sm:p-12">
               <p className="text-2xl font-semibold">{item.title}</p>
@@ -441,6 +403,7 @@ function Guests() {
 
   return (
     <div>
+      <GuestReel />
       <div className="flex flex-wrap gap-x-6 gap-y-3">
         {GUEST_FILTERS.map((item) => (
           <button key={item.value} type="button" onClick={() => setFilter(item.value)} className={cn("text-sm font-medium", filter === item.value ? "text-gray-950 underline decoration-[#8adf4a] decoration-2 underline-offset-8" : "text-gray-400 hover:text-gray-700")}>

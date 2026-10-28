@@ -13,9 +13,38 @@ import { useViewer } from "@/store/selectors";
 
 const LABS_URL = "https://labs.dev.pitchxyz.com";
 const ROSTER = guestRoster();
-const SHOWCASE = ["毛大庆", "李竹", "吴世春", "吴欣鸿", "蔡光渊", "杨守彬", "周奇", "任鹏"] as const;
+const SHOWCASE = [
+  { name: "毛大庆", title: "优客工场创始人" },
+  { name: "李竹", title: "英诺天使创世合伙人" },
+  { name: "吴世春", title: "梅花创投创始合伙人" },
+  { name: "吴欣鸿", title: "美图创始人兼 CEO" },
+  { name: "蔡光渊", title: "怪兽充电创始人" },
+  { name: "杨守彬", title: "丰厚资本创始合伙人" },
+  { name: "周奇", title: "金沙江联合资本管理合伙人" },
+  { name: "任鹏", title: "橡果资本管理合伙人" },
+] as const;
+
+function TrackRail() {
+  const [step, setStep] = useState(0);
+  const item = RHYTHM[step];
+  return (
+    <section className="mx-auto max-w-[1200px] px-5 py-6">
+      <p className="text-xs font-semibold tracking-[0.16em] text-[#888]">六个月的节奏</p>
+      <div className="mt-4 grid gap-2 sm:grid-cols-4">
+        {RHYTHM.map((beat, index) => (
+          <button key={beat.title} type="button" onClick={() => setStep(index)} aria-pressed={step === index} className={step === index ? "rounded-2xl bg-black px-4 py-4 text-left text-white" : "rounded-2xl border border-black/10 px-4 py-4 text-left"}>
+            <span className="text-xs tabular-nums opacity-60">0{index + 1}</span>
+            <span className="mt-1 block font-semibold">{beat.title}</span>
+          </button>
+        ))}
+      </div>
+      <p key={item.title} className="mt-4 max-w-2xl text-lg leading-8 animate-portal-scene">{item.desc}</p>
+    </section>
+  );
+}
 
 export default function PlatformShowcase() {
+  const [picked, setPicked] = useState(0);
   return (
     <div className="min-h-screen bg-white pb-20 text-[#111]">
       <PortalCompare current="f" />
@@ -64,21 +93,31 @@ export default function PlatformShowcase() {
         </div>
       </section>
 
+      <TrackRail />
+
       <section className="mx-auto max-w-[1200px] px-5 py-10">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold tracking-[0.16em] text-[#888]">展示</p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight">平台上的人</h2>
           </div>
-          <a href="#guests" className="text-sm font-semibold">全部嘉宾</a>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setPicked((current) => (current + SHOWCASE.length - 1) % SHOWCASE.length)} className="text-sm font-semibold">上一位</button>
+            <button type="button" onClick={() => setPicked((current) => (current + 1) % SHOWCASE.length)} className="text-sm font-semibold">下一位</button>
+            <a href="#guests" className="text-sm font-semibold">全部嘉宾</a>
+          </div>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {SHOWCASE.map((name) => (
-            <a key={name} href="#guests" className="group">
-              <img src={GUEST_PHOTOS[name]} alt="" className="aspect-[4/5] w-full rounded-2xl object-cover object-top transition duration-500 group-hover:opacity-90" />
-              <p className="mt-3 text-sm font-semibold">{name}</p>
-            </a>
-          ))}
+          {SHOWCASE.map((person, index) => {
+            const on = picked === index;
+            return (
+              <button key={person.name} type="button" onClick={() => setPicked(index)} aria-pressed={on} className={on ? "text-left sm:col-span-2 sm:row-span-2" : "text-left"}>
+                <img src={GUEST_PHOTOS[person.name]} alt="" className={on ? "aspect-[4/3] w-full rounded-2xl object-cover object-top transition-all duration-500" : "aspect-[4/5] w-full rounded-2xl object-cover object-top opacity-80 transition-all duration-500 hover:opacity-100"} />
+                <p className="mt-3 text-sm font-semibold">{person.name}</p>
+                {on ? <p className="mt-1 text-sm text-[#666]">{person.title}</p> : null}
+              </button>
+            );
+          })}
         </div>
       </section>
 

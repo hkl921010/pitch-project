@@ -42,6 +42,101 @@ const CHAPTERS = [
 
 const RECALL = ["圆桌辩论", "入企游学", "大咖讲干货", "路演大赛", "高峰对话", "投资人请回答", "被投企业参访", "投融资对接会", "合作洽谈会", "主题分享会", "高尔夫", "VIP 晚宴", "大师小饭局", "圆桌研讨会"];
 
+const CHAPTER_PAGES = [
+  { href: "#about", label: "学院介绍", line: "以「读懂资本，反向经营」为核心理念。", body: "构建「道 — 略 — 术」三层体系。一线投资人把用真金换来的经验拿来讲。学方法，实战练，链资本。" },
+  { href: "#system", label: "课程理念", line: "不要最缺钱的时候才去找钱。", body: "要么放大现金流，要么找到有未来的价值增值路径。道、略、术，十四节系统课一次讲完。" },
+  { href: "#delivery", label: "交付形式", line: "每一次集中授课，都包含一场真路演。", body: "4 大模块，每 1–2 个月一次。每次含 1 场路演。毕业模块是 2 天资本对接大会。" },
+  { href: "#founder", label: "发起校董", line: "刘小鹰 · 1000 个创业梦想的天使。", body: "2011 年创办老鹰基金。管理规模超 30 亿元，直投近 300 个项目。长远电信创办人。" },
+  { href: "#guests", label: "往期嘉宾", line: "向谁取经，名单都在这一页。", body: "一线投资人、企业家、青年创业者和领域专家。点开可以下翻到完整名单。" },
+  { href: "#benefits", label: "学员权益", line: "严格筛选，面试入学。", body: "成为鹰雄会候选人。另有 1v1 校董咨询、路演现场辅导和永久校友圈。" },
+] as const;
+
+const SPREADS = [
+  { kicker: "01  资本辅导", title: "诊断、学习、路演", body: "六个月系统课，把认知带到真实路演里。", href: "#system", cta: "进入课程" },
+  { kicker: "02  资源对接", title: "项目、机构、嘉宾", body: "在平台上投递，或直接找正在开放的资源。", href: "/discover", cta: "发现项目" },
+  { kicker: "03  发起校董", title: "刘小鹰", body: "1000 个创业梦想的天使。老鹰基金创始合伙人，直投近 300 个项目。", href: "#founder", cta: "看校董", photo: "刘小鹰" },
+] as const;
+
+function Spread() {
+  const [index, setIndex] = useState(0);
+  const page = SPREADS[index];
+  const turn = (delta: number) => setIndex((current) => (current + delta + SPREADS.length) % SPREADS.length);
+  return (
+    <div className="relative min-h-[380px] lg:pl-6">
+      <div className="absolute inset-y-6 right-4 left-10 rounded-[28px] bg-[#e7e1d6]" />
+      <div className="absolute inset-y-3 right-2 left-5 rounded-[28px] bg-white/80 shadow-sm" />
+      <article key={page.kicker} className="relative flex min-h-[380px] flex-col justify-between rounded-[28px] bg-white p-7 shadow-[0_18px_40px_rgba(16,24,40,0.08)] animate-portal-scene">
+        <div>
+          <p className="text-xs tracking-[0.2em] text-[#1f6b12]">{page.kicker}</p>
+          {"photo" in page ? <img src={GUEST_PHOTOS[page.photo]} alt="" className="mt-5 h-28 w-24 rounded-2xl object-cover object-top" /> : null}
+          <h2 className="mt-4 text-3xl font-semibold tracking-tight">{page.title}</h2>
+          <p className="mt-3 text-sm leading-7 text-[#555]">{page.body}</p>
+        </div>
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <a href={page.href} className="text-sm font-semibold underline decoration-[#8adf4a] decoration-2 underline-offset-4">{page.cta}</a>
+          <div className="flex items-center gap-3">
+            <span className="text-xs tabular-nums text-[#999]">{index + 1} / {SPREADS.length}</span>
+            <button type="button" onClick={() => turn(-1)} className="h-9 rounded-full border border-black/10 px-3 text-sm font-semibold">上一页</button>
+            <button type="button" onClick={() => turn(1)} className="h-9 rounded-full bg-black px-3 text-sm font-semibold text-white">下一页</button>
+          </div>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function QuoteDeck() {
+  const [index, setIndex] = useState(0);
+  const quote = QUESTIONS[index];
+  return (
+    <div className="mt-14">
+      <p className="text-sm font-medium text-[#666]">如果你正在想这些问题，欢迎成为鹰雄会候选人。</p>
+      <blockquote key={quote} className="mt-5 max-w-3xl text-3xl leading-snug font-semibold tracking-tight animate-portal-scene sm:text-4xl">{quote}</blockquote>
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        {QUESTIONS.map((item, itemIndex) => (
+          <button key={item} type="button" aria-label={`第 ${itemIndex + 1} 个问题`} aria-pressed={index === itemIndex} onClick={() => setIndex(itemIndex)} className={cn("h-2.5 rounded-full transition-all", index === itemIndex ? "w-8 bg-black" : "w-2.5 bg-black/20")} />
+        ))}
+        <button type="button" onClick={() => setIndex((current) => (current + 1) % QUESTIONS.length)} className="ml-2 text-sm font-semibold">下一问</button>
+      </div>
+    </div>
+  );
+}
+
+function ChapterBrowser() {
+  const [index, setIndex] = useState(0);
+  const page = CHAPTER_PAGES[index];
+  return (
+    <section className="mx-auto grid max-w-[1200px] gap-6 px-5 py-8 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-stretch">
+      <div className="flex flex-col gap-1" role="tablist" aria-label="章节">
+        {CHAPTER_PAGES.map((item, itemIndex) => (
+          <button key={item.href} type="button" role="tab" aria-selected={index === itemIndex} onClick={() => setIndex(itemIndex)} className={cn("rounded-2xl px-4 py-3 text-left transition", index === itemIndex ? "bg-white shadow-[0_8px_24px_rgba(16,24,40,0.06)]" : "hover:bg-white/70")}>
+            <span className="text-xs text-[#999] tabular-nums">{String(itemIndex + 1).padStart(2, "0")}</span>
+            <span className="mt-1 block text-lg font-semibold">{item.label}</span>
+          </button>
+        ))}
+      </div>
+      <div key={page.href} className="flex min-h-[360px] flex-col justify-between rounded-[28px] bg-white p-8 shadow-[0_16px_40px_rgba(16,24,40,0.06)] animate-portal-scene sm:p-10">
+        {page.href === "#founder" ? <img src={GUEST_PHOTOS["刘小鹰"]} alt="" className="h-40 w-32 rounded-2xl object-cover object-top" /> : null}
+        {page.href === "#guests" ? (
+          <div className="flex gap-2">
+            {["毛大庆", "李竹", "吴世春", "吴欣鸿"].map((name) => (
+              <img key={name} src={GUEST_PHOTOS[name]} alt="" className="h-24 w-16 rounded-xl object-cover object-top" />
+            ))}
+          </div>
+        ) : null}
+        <div className={page.href === "#founder" || page.href === "#guests" ? "mt-6" : ""}>
+          <p className="text-xs tracking-[0.22em] text-[#1f6b12]">{CHAPTERS[index]?.desc}</p>
+          <h2 className="mt-3 max-w-xl text-4xl font-semibold tracking-tight">{page.line}</h2>
+          <p className="mt-4 max-w-xl text-base leading-8 text-[#555]">{page.body}</p>
+        </div>
+        <a href={page.href} className="mt-8 inline-flex text-sm font-semibold underline decoration-[#8adf4a] decoration-2 underline-offset-4">
+          进入{page.label}
+        </a>
+      </div>
+    </section>
+  );
+}
+
 export default function PortalB() {
   return (
     <div className="bg-[#f4f1ea] pb-24 text-[#161616]">
@@ -92,22 +187,7 @@ export default function PortalB() {
             </a>
           </div>
         </div>
-        <div className="grid gap-4 lg:pl-6">
-          <a href="#system" className="rounded-3xl bg-white p-6 shadow-[0_8px_24px_rgba(16,24,40,0.06)]">
-            <p className="text-xs font-semibold tracking-[0.16em] text-[#1f6b12]">资本辅导</p>
-            <p className="mt-2 text-2xl font-semibold">诊断、学习、路演</p>
-            <p className="mt-2 text-sm leading-6 text-[#555]">六个月系统课，把认知带到真实路演里。</p>
-          </a>
-          <div className="rounded-3xl bg-white p-6 shadow-[0_8px_24px_rgba(16,24,40,0.06)]">
-            <p className="text-xs font-semibold tracking-[0.16em] text-[#1f6b12]">资源对接</p>
-            <p className="mt-2 text-2xl font-semibold">项目、机构、嘉宾</p>
-            <p className="mt-2 text-sm leading-6 text-[#555]">在平台上投递，或直接找正在开放的资源。</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href="/discover" className="inline-flex h-9 items-center rounded-full bg-black px-4 text-sm font-semibold text-white">发现项目</Link>
-              <a href="#guests" className="inline-flex h-9 items-center rounded-full border border-black/10 px-4 text-sm font-semibold">嘉宾网络</a>
-            </div>
-          </div>
-        </div>
+        <Spread />
       </section>
 
       <div className="border-y border-black/10 bg-white">
@@ -118,15 +198,7 @@ export default function PortalB() {
         </div>
       </div>
 
-      <section className="mx-auto grid max-w-[1200px] gap-3 px-5 py-8 sm:grid-cols-2 lg:grid-cols-3">
-        {CHAPTERS.map((item, index) => (
-          <a key={item.href} href={item.href} className="rounded-2xl bg-white p-5 shadow-[0_8px_24px_rgba(16,24,40,0.06)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(16,24,40,0.1)]">
-            <p className="text-xs text-[#888] tabular-nums">{String(index + 1).padStart(2, "0")}</p>
-            <p className="mt-2 text-xl font-semibold">{item.label}</p>
-            <p className="mt-1 text-sm text-[#555]">{item.desc}</p>
-          </a>
-        ))}
-      </section>
+      <ChapterBrowser />
 
       <section id="about" className="scroll-mt-24 bg-white">
         <div className="mx-auto max-w-[1200px] px-5 py-16 lg:py-20">
@@ -154,16 +226,7 @@ export default function PortalB() {
               </div>
             ))}
           </div>
-          <div className="mt-14">
-            <p className="text-sm font-medium text-[#666]">如果你正在想这些问题，欢迎成为鹰雄会候选人。</p>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {QUESTIONS.map((question) => (
-                <li key={question} className="rounded-2xl bg-[#f4f1ea] px-4 py-3 text-[15px]">
-                  {question}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <QuoteDeck />
         </div>
       </section>
 

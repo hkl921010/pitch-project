@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, Badge } from "@/components/ui/display";
@@ -39,16 +39,50 @@ const NAV = [
   { href: "/me", label: "我的", match: (p: string) => p === "/me" || p.startsWith("/me/") },
 ];
 
+const PORTALS = new Set(["/", "/b", "/c", "/d", "/e", "/f"]);
+
+function isPortalPath(path: string) {
+  return PORTALS.has(path.split("?")[0].split("#")[0]);
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const viewer = useViewer();
+  const requireLogin = useApp((s) => s.requireLogin);
   const bare = pathname.startsWith("/welcome") || pathname.startsWith("/digest/preview");
-  const portal = pathname === "/" || pathname === "/b" || pathname === "/c" || pathname === "/d" || pathname === "/e" || pathname === "/f";
+  const portal = isPortalPath(pathname);
+  const blocked = !viewer && !portal;
   const chat = /^\/inbox\/[^/]+/.test(pathname);
+
+  useEffect(() => {
+    if (!blocked) return;
+    requireLogin("登录后才能进入平台");
+    router.replace("/");
+  }, [blocked, requireLogin, router]);
+
+  useEffect(() => {
+    if (viewer) return;
+    const onClick = (event: MouseEvent) => {
+      const anchor = (event.target as HTMLElement | null)?.closest("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("http") || href.startsWith("mailto")) return;
+      const path = href.split("?")[0].split("#")[0];
+      if (!path.startsWith("/") || isPortalPath(path)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      requireLogin("登录后才能进入平台");
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [viewer, requireLogin]);
+
   return (
     <div className="flex min-h-screen flex-col">
-      {bare || portal ? null : <TopNav />}
-      <main className={cn("flex-1", !bare && !chat && !portal && "pb-20 md:pb-0")}>{children}</main>
-      {bare || chat || portal ? null : <MobileTabBar />}
+      {bare || portal || blocked ? null : <TopNav />}
+      <main className={cn("flex-1", !bare && !chat && !portal && !blocked && "pb-20 md:pb-0")}>{blocked ? null : children}</main>
+      {bare || chat || portal || blocked ? null : <MobileTabBar />}
       <Toaster />
       <LoginPrompt />
       <GlobalHosts />
@@ -305,7 +339,7 @@ function LoginPrompt() {
   const toast = useApp((s) => s.toast);
   const router = useRouter();
   return (
-    <Modal open={open} onClose={close} size="sm" title={reason || "登录 Pitch"} desc="浏览不需要登录；关注、表达意向和创建项目需要一个身份。">
+    <Modal open={open} onClose={close} size="sm" title={reason || "登录 Pitch"} desc="门户可以随便看。进入发现、项目、对话和我的，需要先登录。">
       <div className="flex flex-col gap-2">
         <Button
           variant="primary"

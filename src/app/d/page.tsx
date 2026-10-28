@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PortalCompare } from "@/components/biz/portal-compare";
 import { PortalDepth } from "@/components/biz/portal-depth";
@@ -12,7 +12,64 @@ import { useViewer } from "@/store/selectors";
 const LABS_URL = "https://labs.dev.pitchxyz.com";
 const GREEN = "#3ecf8e";
 
+const FILES = [
+  { name: "诊断.md", lines: ["# 先把企业看穿", "", "- 赛道：天花板、增速、渗透率", "- 模式：增长、效率、复制、壁垒", "- 财务：投资人会翻的三张表", "- 叙事：值钱这件事能不能讲清楚"] },
+  { name: "学习.md", lines: ["# 十四节系统课", "", "道 · 看懂资本，从本质到终局", "略 · 重新看懂自己的企业", "术 · 估值、财务、架构与路演"] },
+  { name: "路演.md", lines: ["# 每一次集中授课，都有一场真路演", "", "4 大模块，每 1–2 个月一次", "每个模块含 1 场路演实战", "毕业模块做成 2 天资本对接大会"] },
+  { name: "对接.md", lines: ["# 正在开放", "", "拾光茶事 · 天使+ 800 万", "跃迁智能 · 跨境服务商渠道", "野径 · 欧洲线下户外连锁", "毛球星球 · 北美宠物连锁"] },
+] as const;
+
+const TABLE = [
+  { name: "拾光茶事", track: "消费", ask: "天使+ 800 万", place: "深圳 · 新加坡", slug: "shiguang-tea" },
+  { name: "跃迁智能", track: "AI", ask: "跨境渠道", place: "杭州", slug: "leap-ai" },
+  { name: "野径", track: "户外", ask: "欧洲渠道", place: "厦门", slug: "wildpath" },
+  { name: "毛球星球", track: "硬件", ask: "北美宠物连锁", place: "深圳", slug: "fur-planet" },
+] as const;
+
+function ConsoleTable() {
+  const [track, setTrack] = useState("全部");
+  const [row, setRow] = useState(0);
+  const tracks = ["全部", "消费", "AI", "户外", "硬件"];
+  const rows = TABLE.filter((item) => track === "全部" || item.track === track);
+  const active = rows[Math.min(row, rows.length - 1)] ?? rows[0];
+  return (
+    <section className="border-t border-white/10 bg-[#141414]">
+      <div className="mx-auto grid max-w-[1200px] gap-6 px-5 py-12 lg:grid-cols-[minmax(0,1.3fr)_280px]">
+        <div>
+          <p className="font-mono text-xs text-[#3ecf8e]">open projects</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {tracks.map((item) => (
+              <button key={item} type="button" onClick={() => { setTrack(item); setRow(0); }} className={item === track ? "rounded-md bg-[#3ecf8e] px-3 py-1 font-mono text-xs text-[#171717]" : "rounded-md border border-white/10 px-3 py-1 font-mono text-xs text-[#b4b4b4]"}>
+                {item}
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 overflow-hidden rounded-lg border border-white/10">
+            {rows.map((item, index) => (
+              <button key={item.slug} type="button" onClick={() => setRow(index)} className={active?.slug === item.slug ? "grid w-full grid-cols-[1.2fr_0.6fr_1fr] gap-3 border-t border-white/10 bg-white/5 px-4 py-3 text-left first:border-t-0" : "grid w-full grid-cols-[1.2fr_0.6fr_1fr] gap-3 border-t border-white/10 px-4 py-3 text-left first:border-t-0 hover:bg-white/5"}>
+                <span className="text-sm">{item.name}</span>
+                <span className="font-mono text-xs text-[#898989]">{item.track}</span>
+                <span className="font-mono text-xs text-[#3ecf8e]">{item.ask}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {active ? (
+          <div className="rounded-lg border border-white/10 bg-[#171717] p-5">
+            <p className="font-mono text-xs text-[#898989]">{active.place}</p>
+            <p className="mt-3 text-2xl">{active.name}</p>
+            <p className="mt-2 font-mono text-sm text-[#3ecf8e]">{active.ask}</p>
+            <Link href={`/p/${active.slug}`} className="mt-6 inline-flex font-mono text-xs text-white underline">打开记录</Link>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 export default function SupabasePortal() {
+  const [file, setFile] = useState(0);
+  const current = FILES[file];
   return (
     <div className="min-h-screen bg-[#1c1c1c] pb-24 text-[#ededed]">
       <PortalCompare current="d" />
@@ -66,28 +123,30 @@ export default function SupabasePortal() {
               </a>
             </div>
           </div>
-          <div className="overflow-hidden rounded-lg border border-white/10 bg-[#242424] shadow-[0_0_0_1px_rgba(62,207,142,0.08),0_24px_80px_rgba(0,0,0,0.45)]">
-            <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 font-mono text-xs text-[#898989]">
+          <div className="overflow-hidden rounded-lg border border-white/10 bg-[#171717] shadow-[0_0_0_1px_rgba(62,207,142,0.08),0_24px_80px_rgba(0,0,0,0.45)]">
+            <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
               <span className="h-2 w-2 rounded-full" style={{ background: GREEN }} />
-              平台
+              <div className="scrollbar-none flex gap-1 overflow-x-auto" role="tablist" aria-label="终端文件">
+                {FILES.map((item, index) => (
+                  <button key={item.name} type="button" role="tab" aria-selected={file === index} onClick={() => setFile(index)} className={index === file ? "rounded-md bg-[#242424] px-3 py-1.5 font-mono text-xs text-[#3ecf8e]" : "rounded-md px-3 py-1.5 font-mono text-xs text-[#898989] hover:text-white"}>
+                    {item.name}
+                  </button>
+                ))}
+              </div>
             </div>
-            {[
-              ["资本辅导", "诊断 · 学习 · 路演", "#system"],
-              ["资源对接", "项目 · 机构 · 嘉宾", "/discover"],
-              ["BP 诊断", "上传商业计划书", LABS_URL],
-              ["公众号文章", "关于我们", ABOUT_URL],
-            ].map(([title, meta, href]) => (
-              <a key={title} href={href} {...(href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})} className="flex items-center justify-between gap-4 border-t border-white/10 px-4 py-4 first:border-t-0 hover:bg-white/5">
-                <span>
-                  <span className="block text-sm">{title}</span>
-                  <span className="mt-1 block font-mono text-xs text-[#898989]">{meta}</span>
+            <pre key={current.name} className="min-h-[280px] px-5 py-5 font-mono text-sm leading-7 text-[#d4d4d4] animate-portal-scene">
+              {current.lines.map((line, lineIndex) => (
+                <span key={lineIndex} className="block">
+                  {line.startsWith("# ") ? <span className="text-[#3ecf8e]">{line}</span> : line || " "}
                 </span>
-                <span className="font-mono text-xs text-[#3ecf8e]">打开</span>
-              </a>
-            ))}
+              ))}
+              <span className="mt-2 inline-block h-4 w-2 bg-[#3ecf8e] align-middle" />
+            </pre>
           </div>
         </div>
       </section>
+
+      <ConsoleTable />
 
       <PortalDepth tone="supabase" />
 

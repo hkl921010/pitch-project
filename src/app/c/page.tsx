@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PortalCompare } from "@/components/biz/portal-compare";
 import { PortalDepth } from "@/components/biz/portal-depth";
-import { ABOUT_URL, GUEST_PHOTOS, HIGHLIGHTS } from "@/data/academy";
+import { ABOUT_URL, GUEST_PHOTOS, HIGHLIGHTS, QUESTIONS } from "@/data/academy";
 import { cn } from "@/lib/cn";
 import { useApp } from "@/store/app-store";
 import { useViewer } from "@/store/selectors";
@@ -21,7 +21,75 @@ const FACES = [
 const PILL = "inline-flex h-12 items-center rounded-full px-6 text-sm font-semibold";
 const GRADIENT = "bg-gradient-to-r from-[#6d5efc] to-[#ee5a9b] text-white shadow-[0_10px_30px_rgba(109,94,252,0.28)] hover:brightness-105";
 
+const LIGHTS = [
+  {
+    label: "诊断",
+    line: "先把短板看清",
+    body: "投资人按真金的标准过一遍：赛道、模式、财务、叙事。",
+    orbs: [
+      { top: -80, left: "18%", size: 520, color: "rgba(109,94,252,0.38)" },
+      { top: 80, left: "68%", size: 240, color: "rgba(125,211,252,0.45)" },
+      { top: 180, left: "8%", size: 180, color: "rgba(238,90,155,0.2)" },
+    ],
+  },
+  {
+    label: "学习",
+    line: "十四节，把方法讲完",
+    body: "道、略、术。每节 3 小时，一线投资人主讲。",
+    orbs: [
+      { top: 20, left: "58%", size: 480, color: "rgba(238,90,155,0.36)" },
+      { top: -40, left: "8%", size: 300, color: "rgba(192,38,211,0.28)" },
+      { top: 200, left: "40%", size: 200, color: "rgba(125,211,252,0.35)" },
+    ],
+  },
+  {
+    label: "路演",
+    line: "带到真人面前改",
+    body: "每个模块一场。决策人在场，好在哪、差在哪，当面说。",
+    orbs: [
+      { top: 40, left: "30%", size: 560, color: "rgba(125,211,252,0.42)" },
+      { top: -60, left: "62%", size: 260, color: "rgba(109,94,252,0.32)" },
+      { top: 160, left: "6%", size: 220, color: "rgba(238,90,155,0.3)" },
+    ],
+  },
+] as const;
+
+function JasperDeck({ light }: { light: number }) {
+  const [card, setCard] = useState(0);
+  const [face, setFace] = useState(0);
+  const question = QUESTIONS[card];
+  const person = FACES[face];
+  return (
+    <div className="relative mx-auto grid max-w-[1120px] items-end gap-10 px-5 pb-14 lg:grid-cols-2">
+      <button type="button" onClick={() => setCard((current) => (current + 1) % QUESTIONS.length)} className="relative h-56 text-left">
+        {[2, 1, 0].map((depth) => (
+          <div key={depth} className="absolute inset-x-4 rounded-[28px] border border-white/80 bg-white/90 p-6 shadow-[0_16px_40px_rgba(109,94,252,0.12)] backdrop-blur" style={{ top: depth * 16, zIndex: 4 - depth, transform: `scale(${1 - depth * 0.045})` }}>
+            {depth === 0 ? (
+              <>
+                <p className="text-xs font-semibold text-[#6d5efc]">点这张卡，翻到下一问</p>
+                <p className="mt-3 text-2xl font-semibold tracking-tight">{question}</p>
+              </>
+            ) : null}
+          </div>
+        ))}
+      </button>
+      <div className="flex items-end justify-center gap-4">
+        <button type="button" onClick={() => setFace((current) => (current + FACES.length - 1) % FACES.length)} className="mb-10 text-sm font-semibold text-[#5c5c6b]">上一张</button>
+        <div className="text-center">
+          <img key={person[0]} src={GUEST_PHOTOS[person[0]]} alt="" className="mx-auto h-72 w-52 rounded-[32px] object-cover object-top shadow-[0_24px_50px_rgba(109,94,252,0.22)] animate-portal-scene" />
+          <p className="mt-3 text-lg font-semibold">{person[0]}</p>
+          <p className="text-sm text-[#6d5efc]">{person[1]}</p>
+          <p className="mt-1 text-xs text-[#8a8a98]">和「{LIGHTS[light].label}」放在同一屏</p>
+        </div>
+        <button type="button" onClick={() => setFace((current) => (current + 1) % FACES.length)} className="mb-10 text-sm font-semibold text-[#5c5c6b]">下一张</button>
+      </div>
+    </div>
+  );
+}
+
 export default function JasperPortal() {
+  const [light, setLight] = useState(0);
+  const scene = LIGHTS[light];
   return (
     <div className="min-h-screen bg-white pb-24 text-[#12121a]">
       <PortalCompare current="c" />
@@ -53,10 +121,14 @@ export default function JasperPortal() {
       </header>
 
       <section id="top" className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[640px]">
-          <div className="absolute top-[-80px] left-1/2 h-[460px] w-[760px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(109,94,252,0.22),transparent_68%)]" />
-          <div className="absolute top-24 right-[8%] h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(238,90,155,0.28),transparent_70%)]" />
-          <div className="absolute top-32 left-[6%] h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(125,211,252,0.35),transparent_70%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[720px]">
+          {scene.orbs.map((orb, orbIndex) => (
+            <div
+              key={orbIndex}
+              className="absolute rounded-full transition-all duration-700 ease-out"
+              style={{ top: orb.top, left: orb.left, width: orb.size, height: orb.size, background: `radial-gradient(circle, ${orb.color}, transparent 68%)` }}
+            />
+          ))}
         </div>
         <div className="relative mx-auto max-w-[860px] px-5 pt-20 pb-8 text-center sm:pt-28">
           <p className="mx-auto inline-flex h-8 items-center rounded-full border border-[#6d5efc]/20 bg-white/80 px-3 text-xs font-semibold text-[#6d5efc]">资本商学</p>
@@ -65,7 +137,14 @@ export default function JasperPortal() {
             <br />
             <span className="bg-gradient-to-r from-[#6d5efc] via-[#c026d3] to-[#ee5a9b] bg-clip-text pb-1 text-transparent">反向经营</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-lg text-lg leading-8 text-[#5c5c6b]">专业的资本辅导与资源对接平台。诊断、学习、路演，六个月走完。</p>
+          <div className="mt-8 flex justify-center gap-2" role="tablist" aria-label="光斑场景">
+            {LIGHTS.map((item, index) => (
+              <button key={item.label} type="button" role="tab" aria-selected={light === index} onClick={() => setLight(index)} className={cn("h-10 rounded-full px-5 text-sm font-semibold transition", light === index ? "bg-[#12121a] text-white" : "bg-white/80 text-[#5c5c6b] hover:bg-white")}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <p key={scene.label} className="mx-auto mt-6 max-w-lg text-lg leading-8 text-[#5c5c6b] animate-portal-scene">{scene.line}。{scene.body}</p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <SubmitProjectButton className={cn(PILL, GRADIENT)} />
             <a href={LABS_URL} target="_blank" rel="noreferrer" className={cn(PILL, "border border-black/10 bg-white hover:border-black/30")}>
@@ -76,27 +155,7 @@ export default function JasperPortal() {
             </a>
           </div>
         </div>
-        <div className="relative mx-auto grid max-w-[1120px] gap-4 px-5 pb-8 lg:grid-cols-2">
-          <a href="#system" className="rounded-[28px] border border-[#6d5efc]/15 bg-white p-7 text-left shadow-[0_16px_40px_rgba(109,94,252,0.08)]">
-            <p className="text-sm font-semibold text-[#6d5efc]">资本辅导</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">诊断、学习、路演</p>
-            <p className="mt-3 text-sm leading-7 text-[#5c5c6b]">六个月系统课。投资人把方法讲透，再带到路演里改。</p>
-          </a>
-          <div className="rounded-[28px] bg-[#12121a] p-7 text-left text-white shadow-[0_16px_40px_rgba(18,18,26,0.16)]">
-            <p className="text-sm font-semibold text-[#ee5a9b]">资源对接</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">项目、机构、嘉宾</p>
-            <p className="mt-3 text-sm leading-7 text-white/70">投递项目，或在平台上找正在开放的资源。</p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Link href="/discover" className="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm font-semibold text-[#12121a]">发现项目</Link>
-              <a href="#guests" className="inline-flex h-10 items-center rounded-full border border-white/20 px-4 text-sm font-semibold">嘉宾网络</a>
-            </div>
-            <div className="mt-5 flex gap-2">
-              {FACES.map(([name]) => (
-                <img key={name} src={GUEST_PHOTOS[name]} alt="" className="h-14 w-12 rounded-xl object-cover object-top" />
-              ))}
-            </div>
-          </div>
-        </div>
+        <JasperDeck light={light} />
       </section>
 
       <section className="mx-auto max-w-[1120px] px-5 py-8">
